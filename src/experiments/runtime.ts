@@ -1,5 +1,5 @@
 import {audioEngine} from '../audio/AudioEngine';
-import {midiToHz, shepardFrame, rissetFrame, chromaticStereoEvents, scrambleOctaves} from '../audio/core.js';
+import {midiToHz, shepardFrame, rissetFrame, scrambleOctaves} from '../audio/core.js';
 import {startPhantomWords} from './phantomWords';
 import {startGlissando,stopGlissando} from './glissandoRuntime';
 import {startZwicker} from './zwickerRuntime';
@@ -8,6 +8,7 @@ import {startCombinationTones} from './combinationTonesRuntime';
 import type {ExperimentSession} from './session';
 import {startOctave} from './octaveRuntime';
 import {startScale} from './scaleRuntime';
+import {startChromatic} from './chromaticRuntime';
 import {startPrecedence} from './precedenceRuntime';
 let stopCurrent:()=>void=()=>{};
 const safe=(v:number,a:number,b:number)=>Math.min(b,Math.max(a,Number(v)||a));
@@ -37,7 +38,7 @@ export async function startExperiment(id:string,p:Record<string,any>,onStatus?:(
   else if(id==='risset-rhythm')rissetRhythm(ctx,bus,p,clean);
   else if(id==='octave')run.session=startOctave(ctx,bus,p,clean);
   else if(id==='scale')run.session=startScale(ctx,bus,p,clean);
-  else if(id==='chromatic')stereoSequence(ctx,bus,chromaticStereoEvents(p.root??60,12),p.rate??6,clean);
+  else if(id==='chromatic')run.session=startChromatic(ctx,bus,p,clean);
   else if(id==='cambiata'){const c=69+(p.transpose??0),events=[{left:c+7,right:c-5},{left:c-7,right:c+5},{left:c+5,right:c-7},{left:c-5,right:c+7}];stereoSequence(ctx,bus,events,p.tempo??5,clean)}
   else if(id==='tritone')tritoneSequence(ctx,bus,p,clean);
   else if(id==='streaming'){const seq=[p.a??440,p.b??659.25,p.a??440,0],rate=safe(p.rate,1,12);let i=0;const tid=setInterval(()=>{const f=seq[i++%4];if(f)toneBurst(ctx,bus,f,.11,0,.05)},1000/rate);clean.push(()=>clearInterval(tid))}
