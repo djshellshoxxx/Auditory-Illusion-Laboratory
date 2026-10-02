@@ -230,3 +230,15 @@ P2 — core signal is substantially correct; finish controls, response UI and ve
 ## Recommended implementation strategy
 
 Do not patch all 18 in one large runtime function. Give every experiment an explicit controller/module with its own Classic fixture, validation and offline test. Stereo/timing-heavy experiments should use AudioContext-time scheduling or pre-rendered buffers rather than `setInterval` for defining events. The shared catalog should point to tested controllers, while UI response controls and visualizations should be declared per experiment.
+## Resolution status (end of 2026-10-02)
+
+All 18 experiments now have a per-experiment spec in `docs/specs/experiments/`, a dedicated controller module with a Classic fixture, experiment-specific Lab controls and response UI, and DSP/timing/channel tests (see `tests/*.test.mjs`).
+
+Global findings resolved:
+1. Per-experiment visualization: stereo and timed experiments show physical L/R event lanes with a playhead; continuous-pitch and rhythm experiments show trajectory or pulse rasters drawn from the same deterministic schedule as the audio; the measured spectrum is kept as a separate, labelled panel.
+2. Response controls are declared per experiment through `src/components/panels/`; the generic button set is no longer used by any catalog entry.
+3. Lab mode exposes the controls listed in each spec, not just the Classic keys.
+4. Defining timing no longer depends on `setInterval`: dichotic and patterned stimuli are rendered offline into sample-stable buffers and looped; glides and rhythms use audio-clock ramps and look-ahead scheduling.
+5. Most stimuli are tested at the rendered-sample level (silence, channel content, frequency content, wrap behaviour).
+
+Remaining caveat: the Cambiata pattern is a structural reconstruction from Deutsch's published description, clearly labelled in the UI. The official recording could not be accessed from the build environment, so its exact notes still need confirming by ear and entering into the Lab figure fields or the Classic fixture.

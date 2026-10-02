@@ -17,12 +17,14 @@ import {startStreaming} from './streamingRuntime';
 import {startContinuity} from './continuityRuntime';
 import {startSpeechToSong} from './speechToSongRuntime';
 import {startMysteriousMelody} from './mysteriousMelodyRuntime';
-import {startPrecedence} from './precedenceRuntime';
+import {startPrecedence,precedenceSession} from './precedenceRuntime';
+import {glissandoSession} from './glissandoSession';
+import {zwickerSession} from './zwickerSession';
 let stopCurrent:()=>void=()=>{};
 type Cleanup=()=>void;
 
 export async function startExperiment(id:string,p:Record<string,any>,onStatus?:(message:string)=>void):Promise<ExperimentSession|void>{stopExperiment();
-  if(id==='glissando'){await startGlissando(p);return}
+  if(id==='glissando'){await startGlissando(p);return glissandoSession(p)}
   const ctx=await audioEngine.ensureRunning(),bus=await audioEngine.createInputBus(),clean:Cleanup[]=[];const run:{session?:ExperimentSession}={};
   if(id==='shepard')run.session=startShepard(ctx,bus,p,clean);
   else if(id==='risset-glide')run.session=startRissetGlide(ctx,bus,p,clean);
@@ -34,10 +36,10 @@ export async function startExperiment(id:string,p:Record<string,any>,onStatus?:(
   else if(id==='tritone')run.session=startTritone(ctx,bus,p,clean);
   else if(id==='streaming')run.session=startStreaming(ctx,bus,p,clean);
   else if(id==='continuity')run.session=startContinuity(ctx,bus,p,clean);
-  else if(id==='zwicker')startZwicker(ctx,bus,p,clean,onStatus);
+  else if(id==='zwicker'){startZwicker(ctx,bus,p,clean,onStatus);run.session=zwickerSession(p)}
   else if(id==='missing-fundamental')startMissingFundamental(ctx,bus,p,clean);
   else if(id==='combination-tones')startCombinationTones(ctx,bus,p,clean);
-  else if(id==='precedence')startPrecedence(ctx,bus,p,clean);
+  else if(id==='precedence'){startPrecedence(ctx,bus,p,clean);run.session=precedenceSession(p)}
   else if(id==='phantom-words')await startPhantomWords(ctx,bus,p,clean);
   else if(id==='mysterious-melody')run.session=startMysteriousMelody(ctx,bus,p,clean);
   else if(id==='speech-to-song')run.session=await startSpeechToSong(ctx,bus,p,clean);

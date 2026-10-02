@@ -74,3 +74,8 @@ export function startPrecedence(ctx:AudioContext,bus:AudioNode,params:Params,cle
   });
   return pair;
 }
+
+export function precedenceSession(params:Params){
+  const p=normalizePrecedenceParams(params),pair=buildPrecedencePair(p),loop=p.repetitionMs/1000,dur=Math.max(.004,p.burstMs/1000);
+  return {startedAt:performance.now()+20,loopSeconds:loop,events:pair.events.map(e=>({time:e.timeSeconds,duration:dur,channel:e.side as 'left'|'right',frequencyHz:1000,label:`${e.role} ${e.side}`}))};
+}
