@@ -29,7 +29,7 @@ const makeRandom=seed=>{
   return()=>((state=(Math.imul(state,1664525)+1013904223)>>>0)/4294967296);
 };
 
-export function buildMissingFundamentalComponents(input=MISSING_FUNDAMENTAL_CLASSIC,seed=1,sampleRate=48000){
+export function buildMissingFundamentalComponents(input={},seed=1,sampleRate=48000){
   const p=normalizeMissingFundamentalParams(input,sampleRate);
   const random=makeRandom(seed);
   const components=[];
