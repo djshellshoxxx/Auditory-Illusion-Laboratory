@@ -16,9 +16,10 @@ export async function startPhantomWords(ctx:AudioContext,bus:AudioNode,p:Params,
   const tokenALabel=typeof p.tokenALabel==='string'&&p.tokenALabel?p.tokenALabel:PHANTOM_WORD_DEFAULT_LABELS[0];
   const tokenBLabel=typeof p.tokenBLabel==='string'&&p.tokenBLabel?p.tokenBLabel:PHANTOM_WORD_DEFAULT_LABELS[1];
   const tokenPeriod=Math.min(2,Math.max(.15,Number(p.tokenPeriod)||.4));
+  const offset=Math.min(tokenPeriod*2,Math.max(0,Number.isFinite(Number(p.offset))?Number(p.offset):tokenPeriod));
   const repetitions=Math.min(80,Math.max(2,Math.round(Number(p.repetitions)||24)));
   const [a,b]=await Promise.all([decode(ctx,tokenAUrl),decode(ctx,tokenBUrl)]);
-  const schedule=phantomWordSchedule([tokenALabel,tokenBLabel],tokenPeriod,repetitions);
+  const schedule=phantomWordSchedule([tokenALabel,tokenBLabel],tokenPeriod,repetitions,offset);
   const buffers=new Map([[tokenALabel,a],[tokenBLabel,b]]);
   const sources:AudioBufferSourceNode[]=[];
   const nodes:AudioNode[]=[];
