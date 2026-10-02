@@ -1,8 +1,9 @@
 import {audioEngine} from '../audio/AudioEngine';
-import {midiToHz, shepardFrame, rissetFrame, missingFundamental, stereoAlternate, scaleStereoEvents, chromaticStereoEvents, scrambleOctaves} from '../audio/core.js';
+import {midiToHz, shepardFrame, rissetFrame, stereoAlternate, scaleStereoEvents, chromaticStereoEvents, scrambleOctaves} from '../audio/core.js';
 import {startPhantomWords} from './phantomWords';
 import {startGlissando,stopGlissando} from './glissandoRuntime';
 import {startZwicker} from './zwickerRuntime';
+import {startMissingFundamental} from './missingFundamentalRuntime';
 let stopCurrent:()=>void=()=>{};
 const safe=(v:number,a:number,b:number)=>Math.min(b,Math.max(a,Number(v)||a));
 
@@ -37,7 +38,7 @@ export async function startExperiment(id:string,p:Record<string,any>,onStatus?:(
   else if(id==='streaming'){const seq=[p.a??440,p.b??659.25,p.a??440,0],rate=safe(p.rate,1,12);let i=0;const tid=setInterval(()=>{const f=seq[i++%4];if(f)toneBurst(ctx,bus,f,.11,0,.05)},1000/rate);clean.push(()=>clearInterval(tid))}
   else if(id==='continuity')continuity(ctx,bus,p,clean);
   else if(id==='zwicker')startZwicker(ctx,bus,p,clean,onStatus);
-  else if(id==='missing-fundamental')missingFundamental(p.f0,p.first,p.last).forEach((h:any)=>{const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.value=h.frequency;g.gain.value=.06/h.harmonic;o.connect(g).connect(bus);o.start();clean.push(()=>{try{o.stop()}catch{};o.disconnect();g.disconnect()})});
+  else if(id==='missing-fundamental')startMissingFundamental(ctx,bus,p,clean);
   else if(id==='combination-tones'){[p.f1,p.f2].forEach((f:number)=>{const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.value=safe(f,20,12000);g.gain.value=safe(p.level,.02,.18);o.connect(g).connect(bus);o.start();clean.push(()=>{try{o.stop()}catch{};o.disconnect();g.disconnect()})})}
   else if(id==='precedence'){const source=ctx.createOscillator(),gain=ctx.createGain(),left=ctx.createStereoPanner(),right=ctx.createStereoPanner(),delay=ctx.createDelay(.08);source.frequency.value=330;gain.gain.value=.045;left.pan.value=(p.first==='right'?1:-1);right.pan.value=-left.pan.value;delay.delayTime.value=safe(p.delayMs,0,40)/1000;source.connect(gain);gain.connect(left).connect(bus);gain.connect(delay).connect(right).connect(bus);source.start();clean.push(()=>{try{source.stop()}catch{};source.disconnect();gain.disconnect();left.disconnect();right.disconnect();delay.disconnect()})}
   else if(id==='phantom-words')await startPhantomWords(ctx,bus,p,clean);
