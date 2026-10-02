@@ -19,13 +19,13 @@ export function continuityCycle(total=1.2,gapStart=.45,gapDuration=.25){total=cl
 export function phantomWordSchedule(tokens=['no','way'],tokenPeriod=.4,repetitions=24,offset=tokenPeriod){
   if(!Array.isArray(tokens)||tokens.length!==2)throw new Error('Phantom Words requires exactly two speech tokens');
   tokenPeriod=clamp(tokenPeriod,.15,2);repetitions=Math.max(1,Math.round(clamp(repetitions,1,200)));offset=clamp(offset,0,tokenPeriod*2);
-  const out=[],slots=repetitions*2,duration=slots*tokenPeriod;
-  for(let i=0;i<slots;i++)out.push({time:i*tokenPeriod,channel:'left',token:tokens[i%2]});
+  const at=v=>+v.toFixed(10),out=[],slots=repetitions*2,duration=slots*tokenPeriod;
+  for(let i=0;i<slots;i++)out.push({time:at(i*tokenPeriod),channel:'left',token:tokens[i%2]});
   const firstRightIndex=-Math.ceil(offset/tokenPeriod);
   for(let i=firstRightIndex;i<slots;i++){
     const time=i*tokenPeriod+offset;
     if(time<-1e-9||time>=duration-1e-9)continue;
-    out.push({time:+time.toFixed(10),channel:'right',token:tokens[((i%2)+2)%2]});
+    out.push({time:at(time),channel:'right',token:tokens[((i%2)+2)%2]});
   }
   return out.sort((a,b)=>a.time-b.time||(a.channel==='left'?-1:1));
 }
