@@ -1,7 +1,7 @@
 import {audioEngine} from '../audio/AudioEngine';
 import {midiToHz, shepardFrame, rissetFrame, missingFundamental, stereoAlternate, scaleStereoEvents, chromaticStereoEvents, scrambleOctaves} from '../audio/core.js';
 import {startPhantomWords} from './phantomWords';
-import {startGlissando} from './glissandoRuntime';
+import {startGlissando,stopGlissando} from './glissandoRuntime';
 let stopCurrent:()=>void=()=>{};
 const safe=(v:number,a:number,b:number)=>Math.min(b,Math.max(a,Number(v)||a));
 
@@ -44,4 +44,4 @@ export async function startExperiment(id:string,p:Record<string,any>){stopExperi
   else if(id==='speech-to-song')throw new Error('Use Record Phrase, then Repeat in the speech panel.');
   stopCurrent=()=>{for(const f of clean.splice(0)){try{f()}catch{}}};audioEngine.registerCleanup(stopCurrent);
 }
-export function stopExperiment(){try{stopCurrent()}catch{}stopCurrent=()=>{}}
+export function stopExperiment(){stopGlissando();try{stopCurrent()}catch{}stopCurrent=()=>{}}
