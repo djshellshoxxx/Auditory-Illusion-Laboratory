@@ -1,5 +1,5 @@
 import {audioEngine} from '../audio/AudioEngine';
-import {midiToHz, shepardFrame, rissetFrame, scrambleOctaves} from '../audio/core.js';
+import {midiToHz, rissetFrame, scrambleOctaves} from '../audio/core.js';
 import {startPhantomWords} from './phantomWords';
 import {startGlissando,stopGlissando} from './glissandoRuntime';
 import {startZwicker} from './zwickerRuntime';
@@ -11,6 +11,7 @@ import {startScale} from './scaleRuntime';
 import {startChromatic} from './chromaticRuntime';
 import {startCambiata} from './cambiataRuntime';
 import {startShepard} from './shepardRuntime';
+import {startRissetGlide} from './rissetGlideRuntime';
 import {startPrecedence} from './precedenceRuntime';
 let stopCurrent:()=>void=()=>{};
 const safe=(v:number,a:number,b:number)=>Math.min(b,Math.max(a,Number(v)||a));
@@ -20,10 +21,6 @@ function toneBurst(ctx:AudioContext,bus:AudioNode,f:number,duration=.16,pan=0,ga
   const o=ctx.createOscillator(),g=ctx.createGain(),p=ctx.createStereoPanner();o.type=type;o.frequency.value=safe(f,20,18000);p.pan.value=safe(pan,-1,1);
   g.gain.setValueAtTime(.0001,ctx.currentTime);g.gain.exponentialRampToValueAtTime(Math.max(.0002,gain),ctx.currentTime+.008);g.gain.exponentialRampToValueAtTime(.0001,ctx.currentTime+duration);
   o.connect(g).connect(p).connect(bus);o.start();o.stop(ctx.currentTime+duration+.01);return()=>{try{o.stop()}catch{};o.disconnect();g.disconnect();p.disconnect()};
-}
-function continuousShepard(ctx:AudioContext,bus:AudioNode,p:Record<string,any>,discrete:boolean,clean:Cleanup[]){
-  const count=Math.round(safe(p.partials,3,10)),nodes=Array.from({length:count},()=>{const o=ctx.createOscillator(),g=ctx.createGain();g.gain.value=0;o.connect(g).connect(bus);o.start();return{o,g}});let phase=0,last=performance.now();
-  const tick=()=>{const now=performance.now(),dt=Math.min(.1,(now-last)/1000);last=now;const direction=(p.direction??1)<0?-1:1;if(discrete){const rate=safe(p.stepRate,0.25,12);phase=Math.floor((now/1000*rate)%12)/12;}else phase=(phase+dt*safe(p.speed,.01,1)*direction+1)%1;const fr=shepardFrame(safe(p.base,40,500),count,safe(p.center,100,5000),safe(p.width,.2,4),phase,direction);fr.forEach((x:any,i:number)=>{nodes[i].o.frequency.setTargetAtTime(x.frequency,ctx.currentTime,.012);nodes[i].g.gain.setTargetAtTime(x.gain*.045,ctx.currentTime,.015)})};tick();const id=setInterval(tick,20);clean.push(()=>clearInterval(id),()=>nodes.forEach(n=>{try{n.o.stop()}catch{};n.o.disconnect();n.g.disconnect()}));
 }
 function rissetRhythm(ctx:AudioContext,bus:AudioNode,p:Record<string,any>,clean:Cleanup[]){
   const layers=Math.round(safe(p.layers,2,8)),acc=Array(layers).fill(0);let phase=0,last=performance.now();const id=setInterval(()=>{const now=performance.now(),dt=Math.min(.08,(now-last)/1000);last=now;phase=(phase+dt*.13*((p.direction??1)<0?-1:1)+1)%1;const fr=rissetFrame(safe(p.bpm,30,240),layers,phase,p.direction??1);fr.forEach((x:any,i:number)=>{acc[i]+=dt*x.rate/60;while(acc[i]>=1){acc[i]-=1;toneBurst(ctx,bus,100+i*55,.045,(i/(layers-1))*1.6-.8,.055*x.gain,'square')}})},20);clean.push(()=>clearInterval(id));
@@ -35,7 +32,7 @@ export async function startExperiment(id:string,p:Record<string,any>,onStatus?:(
   if(id==='glissando'){await startGlissando(p);return}
   const ctx=await audioEngine.ensureRunning(),bus=await audioEngine.createInputBus(),clean:Cleanup[]=[];const run:{session?:ExperimentSession}={};
   if(id==='shepard')run.session=startShepard(ctx,bus,p,clean);
-  else if(id==='risset-glide')continuousShepard(ctx,bus,p,false,clean);
+  else if(id==='risset-glide')run.session=startRissetGlide(ctx,bus,p,clean);
   else if(id==='risset-rhythm')rissetRhythm(ctx,bus,p,clean);
   else if(id==='octave')run.session=startOctave(ctx,bus,p,clean);
   else if(id==='scale')run.session=startScale(ctx,bus,p,clean);
