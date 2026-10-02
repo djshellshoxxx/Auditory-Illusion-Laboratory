@@ -111,3 +111,75 @@ test('Combination Tone Explorer keeps predicted products separate from generated
   await page.getByRole('button',{name:'Stop',exact:true}).click();
   await expect(page.locator('.status')).toContainText('Stopped');
 });
+
+test('Precedence / Haas uses discrete lead-lag transients and experiment-specific reporting',async({page})=>{
+  await page.goto('/Auditory-Illusion-Laboratory/');
+  await page.getByRole('button',{name:'Precedence / Haas Explorer'}).click();
+  await expect(page.getByRole('heading',{name:'How to listen'})).toBeVisible();
+  await expect(page.getByText(/stereo speakers/i)).toBeVisible();
+  await expect(page.getByRole('button',{name:'One fused sound'})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Two distinct sounds'})).toBeVisible();
+  await expect(page.getByLabel('Precedence perceived location')).toBeVisible();
+
+  await page.getByRole('button',{name:'LAB',exact:true}).click();
+  await expect(page.getByLabel('Lead-lag delay (ms)')).toBeVisible();
+  await expect(page.getByLabel('Lead side')).toBeVisible();
+  await expect(page.getByLabel('Source type')).toBeVisible();
+  await expect(page.getByLabel('Transient duration (ms)')).toBeVisible();
+  await expect(page.getByLabel('Repetition interval (ms)')).toBeVisible();
+  await expect(page.getByLabel('Lead-vs-lag level difference (dB)')).toBeVisible();
+
+  await page.getByRole('button',{name:'Start',exact:true}).click();
+  await expect(page.locator('.status')).toContainText('Playing');
+  await page.waitForTimeout(100);
+  await page.getByRole('button',{name:'Stop',exact:true}).click();
+  await expect(page.locator('.status')).toContainText('Stopped');
+});
+
+const rebuilt:[string,string][]=[
+  ['Shepard Circular Pitch','Rising endlessly'],
+  ['Shepard–Risset Glide','Rising endlessly'],
+  ['Risset Rhythm','Accelerating endlessly'],
+  ['Octave Illusion','Save perception report'],
+  ['Scale Illusion','Save perception report'],
+  ['Chromatic Illusion','Save perception report'],
+  ['Cambiata Illusion','Save perception report'],
+  ['Auditory Stream Segregation','Two streams'],
+  ['Continuity / Filling-in','Continuous through the gap'],
+  ['Mysterious Melody','Recognized'],
+];
+for(const [name,response] of rebuilt){
+  test(`${name} starts, shows its own response UI and stops`,async({page})=>{
+    const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+    await page.goto('/Auditory-Illusion-Laboratory/');
+    await page.getByRole('button',{name,exact:true}).click();
+    await expect(page.getByRole('heading',{name:'How to listen'})).toBeVisible();
+    await expect(page.getByRole('button',{name:response,exact:true})).toBeVisible();
+    await expect(page.getByRole('button',{name:'Rising',exact:true})).toHaveCount(0);
+    await page.getByRole('button',{name:'LAB',exact:true}).click();
+    await page.getByRole('button',{name:'Start',exact:true}).click();
+    await expect(page.locator('.status')).toContainText('Playing');
+    await page.waitForTimeout(400);
+    await page.getByRole('button',{name:'Stop',exact:true}).click();
+    await expect(page.locator('.status')).toContainText('Stopped');
+    expect(errors).toEqual([]);
+  });
+}
+
+test('Tritone mapper records a judgment keyed to pitch class and advances',async({page})=>{
+  await page.goto('/Auditory-Illusion-Laboratory/');
+  await page.getByRole('button',{name:'Tritone Paradox Mapper'}).click();
+  await expect(page.getByText(/Trial 1 of 12/)).toBeVisible();
+  await page.getByRole('button',{name:'Play pair'}).click();
+  await page.getByRole('button',{name:/^Up/}).click();
+  await expect(page.getByText(/Trial 2 of 12/)).toBeVisible();
+  await expect(page.getByLabel('Tritone paradox response map')).toContainText('↑1');
+});
+
+test('Speech-to-Song asks for a recording before Start',async({page})=>{
+  await page.goto('/Auditory-Illusion-Laboratory/');
+  await page.getByRole('button',{name:'Speech-to-Song'}).click();
+  await expect(page.getByRole('button',{name:'Record short phrase'})).toBeVisible();
+  await page.getByRole('button',{name:'Start',exact:true}).click();
+  await expect(page.locator('.status')).toContainText('Record a short phrase first');
+});

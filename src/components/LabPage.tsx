@@ -1,95 +1,48 @@
-import {useMemo,useRef,useState} from 'react';
+import {useMemo,useState} from 'react';
 import {experiments} from '../experiments/catalog.js';
 import {startExperiment,stopExperiment} from '../experiments/runtime';
 import {PerceptionStore} from '../perception/store';
 import type {PlaybackMode} from '../types';
-import {buildMissingFundamentalComponents} from '../experiments/missingFundamental.js';
-import {buildCombinationToneStimulus} from '../experiments/combinationTones.js';
+import type {ExperimentSession} from '../experiments/session';
 import {SignalCanvas} from './SignalCanvas';
+import {EventLanes} from './EventLanes';
+import {experimentPanels} from './panels';
+import type {PanelProps,Params} from './panels/types';
 
-function ParamEditor({params,setParams}:{params:Record<string,any>;setParams:(p:Record<string,any>)=>void}){
+function ParamEditor({params,setParams}:{params:Params;setParams:(p:Params)=>void}){
   return <div className="param-grid">{Object.entries(params).map(([k,v])=>typeof v==='number'?<label key={k}><span>{k}</span><input type="number" step="any" value={v} onChange={e=>setParams({...params,[k]:+e.target.value})}/></label>:typeof v==='string'?<label key={k}><span>{k}</span><input value={v} onChange={e=>setParams({...params,[k]:e.target.value})}/></label>:typeof v==='boolean'?<label key={k}><span>{k}</span><input type="checkbox" checked={v} onChange={e=>setParams({...params,[k]:e.target.checked})}/></label>:null)}</div>;
+}
+function GenericResponses({report}:PanelProps){
+  return <section className="reports"><button onClick={()=>report('rising')}>Rising</button><button onClick={()=>report('falling')}>Falling</button><button onClick={()=>report('ambiguous')}>Ambiguous</button><button onClick={()=>report('one-stream')}>One stream</button><button onClick={()=>report('two-streams')}>Two streams</button><button onClick={()=>report('tone-heard')}>Tone heard</button></section>;
 }
 
 export function LabPage(){
-  const [id,setId]=useState(experiments[0].id),[mode,setMode]=useState<PlaybackMode>('classic'),[running,setRunning]=useState(false),[msg,setMsg]=useState('Audio idle');
+  const [id,setId]=useState(experiments[0].id),[mode,setMode]=useState<PlaybackMode>('classic'),[running,setRunning]=useState(false),[msg,setMsg]=useState('Audio idle'),[session,setSession]=useState<ExperimentSession|null>(null);
   const exp:any=useMemo(()=>experiments.find(e=>e.id===id)!,[id]);
-  const [params,setParams]=useState<Record<string,any>>({...exp.classicParams});
-  const rec=useRef<MediaRecorder|null>(null),chunks=useRef<Blob[]>([]),blobUrl=useRef<string>('');
-  const tokenRec=useRef<MediaRecorder|null>(null),tokenChunks=useRef<Blob[]>([]),tokenStream=useRef<MediaStream|null>(null),tokenTarget=useRef<'A'|'B'|null>(null);
-  const [leftReport,setLeftReport]=useState(''),[rightReport,setRightReport]=useState(''),[centerReport,setCenterReport]=useState(''),[glissReport,setGlissReport]=useState(''),[zwickerPitch,setZwickerPitch]=useState(''),[missingPitch,setMissingPitch]=useState(''),[comboPitch,setComboPitch]=useState(''),[comboDescription,setComboDescription]=useState('');
-
-  const select=(x:string)=>{stopExperiment();setRunning(false);setId(x);const e:any=experiments.find(q=>q.id===x)!;setParams({...e.classicParams});setMsg('Audio idle');setLeftReport('');setRightReport('');setCenterReport('');setGlissReport('');setZwickerPitch('');setMissingPitch('');setComboPitch('');setComboDescription('')};
-  const start=async()=>{try{await startExperiment(id,params,setMsg);setRunning(true);if(id!=='zwicker')setMsg('Playing')}catch(e){setMsg((e as Error).message)}};
+  const [params,setParams]=useState<Params>({...exp.classicParams});
+  const panels=experimentPanels[id]??{};
+  const select=(x:string)=>{stopExperiment();setRunning(false);setSession(null);setId(x);const e:any=experiments.find(q=>q.id===x)!;setParams({...e.classicParams});setMsg('Audio idle')};
+  const play=async(override?:Params)=>{try{const s=await startExperiment(id,override?{...params,...override}:params,setMsg);setSession(s??{startedAt:performance.now()});setRunning(true);if(id!=='zwicker')setMsg('Playing')}catch(e){setMsg((e as Error).message)}};
+  const start=()=>play();
   const stop=()=>{stopExperiment();setRunning(false);setMsg('Stopped')};
   const report=(response:unknown)=>{PerceptionStore.record({experimentId:id,timestamp:Date.now(),mode,params,response});setMsg('Perception report recorded locally')};
-  const recordSpeech=async()=>{try{const s=await navigator.mediaDevices.getUserMedia({audio:true});chunks.current=[];rec.current=new MediaRecorder(s);rec.current.ondataavailable=e=>chunks.current.push(e.data);rec.current.onstop=()=>{const b=new Blob(chunks.current,{type:'audio/webm'});blobUrl.current=URL.createObjectURL(b);s.getTracks().forEach(t=>t.stop());setMsg('Phrase recorded; replay is unchanged audio')};rec.current.start();setMsg('Recording…')}catch{setMsg('Microphone permission unavailable; other experiments still work')}};
   const exportData=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([PerceptionStore.exportJson()],{type:'application/json'}));a.download='auditory-perception-records.json';a.click()};
-  const setTokenFile=(which:'A'|'B',file?:File)=>{if(!file)return;const url=URL.createObjectURL(file);setParams({...params,[`token${which}Url`]:url,[`token${which}Label`]:file.name});setMsg(`Token ${which} loaded from ${file.name}`)};
-  const recordToken=async(which:'A'|'B')=>{try{if(tokenRec.current?.state==='recording')tokenRec.current.stop();const stream=await navigator.mediaDevices.getUserMedia({audio:true});tokenStream.current=stream;tokenTarget.current=which;tokenChunks.current=[];const recorder=new MediaRecorder(stream);tokenRec.current=recorder;recorder.ondataavailable=e=>{if(e.data.size)tokenChunks.current.push(e.data)};recorder.onstop=()=>{const target=tokenTarget.current;if(target){const blob=new Blob(tokenChunks.current,{type:recorder.mimeType||'audio/webm'});const url=URL.createObjectURL(blob);setParams(current=>({...current,[`token${target}Url`]:url,[`token${target}Label`]:`recorded token ${target}`}));setMsg(`Recorded token ${target}`)}tokenStream.current?.getTracks().forEach(t=>t.stop());tokenStream.current=null;tokenTarget.current=null};recorder.start();setMsg(`Recording token ${which}… say one short word or syllable`)}catch{setMsg('Microphone permission unavailable')}};
-  const stopTokenRecording=()=>{if(tokenRec.current?.state==='recording')tokenRec.current.stop()};
-  const comboStimulus=id==='combination-tones'?buildCombinationToneStimulus(params):null;
-  const products=comboStimulus?.predictedProducts??null;
-  const harms=id==='missing-fundamental'?buildMissingFundamentalComponents(params):null;
-
-  const phantomControls=<div className="param-grid phantom-controls">
-    <label><span>Token A name</span><input value={params.tokenALabel??'no'} onChange={e=>setParams({...params,tokenALabel:e.target.value})}/></label>
-    <label><span>Token A audio</span><input aria-label="Token A audio" type="file" accept="audio/*" onChange={e=>setTokenFile('A',e.target.files?.[0])}/></label>
-    <button type="button" onClick={()=>void recordToken('A')}>Record token A</button>
-    <label><span>Token B name</span><input value={params.tokenBLabel??'way'} onChange={e=>setParams({...params,tokenBLabel:e.target.value})}/></label>
-    <label><span>Token B audio</span><input aria-label="Token B audio" type="file" accept="audio/*" onChange={e=>setTokenFile('B',e.target.files?.[0])}/></label>
-    <button type="button" onClick={()=>void recordToken('B')}>Record token B</button>
-    <button type="button" disabled={tokenRec.current?.state!=='recording'} onClick={stopTokenRecording}>Stop token recording</button>
-    <label><span>Token period (seconds)</span><input type="number" min="0.15" max="2" step="0.01" value={params.tokenPeriod??.4} onChange={e=>setParams({...params,tokenPeriod:+e.target.value})}/></label>
-    <label><span>Stereo track offset (seconds)</span><input type="number" min="0" max="4" step="0.01" value={params.offset??params.tokenPeriod??.4} onChange={e=>setParams({...params,offset:+e.target.value})}/></label>
-    <label><span>Repeat cycles</span><input type="number" min="2" max="80" step="1" value={params.repetitions??24} onChange={e=>setParams({...params,repetitions:+e.target.value})}/></label>
-    <label><input type="checkbox" checked={Boolean(params.channelSwap)} onChange={e=>setParams({...params,channelSwap:e.target.checked})}/> Swap left/right channels</label>
-    <button type="button" onClick={()=>setParams({...exp.classicParams})}>Use built-in NO / WAY tokens</button>
-    <small>For the classic relationship, keep the stereo offset equal to one token period. Uploaded or recorded tokens remain local to this browser session.</small>
-  </div>;
-
-  const zwickerControls=<div className="param-grid zwicker-controls">
-    <label><span>Notch center (Hz)</span><input aria-label="Notch center (Hz)" type="number" min="500" max="8000" step="10" value={params.centerHz??4000} onChange={e=>setParams({...params,centerHz:+e.target.value})}/></label>
-    <label><span>Notch width (octaves)</span><input aria-label="Notch width (octaves)" type="number" min="0.2" max="1.5" step="0.05" value={params.notchOctaves??1} onChange={e=>setParams({...params,notchOctaves:+e.target.value})}/></label>
-    <label><span>Noise duration (seconds)</span><input aria-label="Noise duration (seconds)" type="number" min="0.25" max="60" step="0.05" value={params.noiseSeconds??5} onChange={e=>setParams({...params,noiseSeconds:+e.target.value})}/></label>
-    <label><span>Silent listening window (seconds)</span><input aria-label="Silent listening window (seconds)" type="number" min="0.25" max="12" step="0.05" value={params.listenSeconds??4} onChange={e=>setParams({...params,listenSeconds:+e.target.value})}/></label>
-    <label><span>Noise level</span><input aria-label="Noise level" type="number" min="0.01" max="0.3" step="0.01" value={params.level??.18} onChange={e=>setParams({...params,level:+e.target.value})}/></label>
-    <label><span>Filter steepness (stages)</span><input aria-label="Filter steepness (stages)" type="number" min="1" max="6" step="1" value={params.filterStages??4} onChange={e=>setParams({...params,filterStages:+e.target.value})}/></label>
-    <small>The report window is digitally silent. If you do not hear a tone, do not compensate by pushing the listening level higher.</small>
-  </div>;
-
-  const missingControls=<div className="param-grid missing-fundamental-controls">
-    <label><span>Fundamental reference (Hz)</span><input aria-label="Fundamental reference (Hz)" type="number" min="40" max="2000" step="1" value={params.f0??110} onChange={e=>setParams({...params,f0:+e.target.value})}/></label>
-    <label><span>First generated harmonic</span><input aria-label="First generated harmonic" type="number" min="2" max="16" step="1" value={params.firstHarmonic??2} onChange={e=>setParams({...params,firstHarmonic:+e.target.value})}/></label>
-    <label><span>Last generated harmonic</span><input aria-label="Last generated harmonic" type="number" min="2" max="24" step="1" value={params.lastHarmonic??8} onChange={e=>setParams({...params,lastHarmonic:+e.target.value})}/></label>
-    <label><span>Amplitude rolloff (dB/octave)</span><input aria-label="Amplitude rolloff (dB/octave)" type="number" min="0" max="18" step="0.5" value={params.amplitudeRolloffDbPerOctave??6} onChange={e=>setParams({...params,amplitudeRolloffDbPerOctave:+e.target.value})}/></label>
-    <label><span>Phase mode</span><select aria-label="Phase mode" value={params.phaseMode??'sine'} onChange={e=>setParams({...params,phaseMode:e.target.value})}><option value="sine">Aligned sine</option><option value="alternating">Alternating 0 / π</option><option value="random">Deterministic random</option></select></label>
-    <small>The reference f0 is never synthesized. Changing phase alters waveform shape while preserving the harmonic frequencies.</small>
-  </div>;
-
-  const combinationControls=<div className="param-grid combination-tone-controls">
-    <label><span>Primary f1 (Hz)</span><input aria-label="Primary f1 (Hz)" type="number" min="80" max="10000" step="1" value={params.f1??700} onChange={e=>setParams({...params,f1:+e.target.value})}/></label>
-    <label><span>Primary f2 (Hz)</span><input aria-label="Primary f2 (Hz)" type="number" min="80" max="12000" step="1" value={params.f2??900} onChange={e=>setParams({...params,f2:+e.target.value})}/></label>
-    <label><span>Primary level</span><input aria-label="Primary level" type="number" min="0.01" max="0.18" step="0.01" value={params.level??.16} onChange={e=>setParams({...params,level:+e.target.value})}/></label>
-    <label><span>Primary balance (f1 ← 0 → f2)</span><input aria-label="Primary balance" type="number" min="-1" max="1" step="0.05" value={params.balance??0} onChange={e=>setParams({...params,balance:+e.target.value})}/></label>
-    <label><span>Waveform</span><select aria-label="Waveform" value={params.waveform??'sine'} onChange={e=>setParams({...params,waveform:e.target.value})}><option value="sine">Sine (clean reference)</option><option value="triangle">Triangle</option><option value="square">Square</option><option value="sawtooth">Sawtooth</option></select></label>
-    {params.waveform!=='sine'&&<small>Exploratory warning: non-sine sources contain ordinary source harmonics. Those harmonics can overlap predicted combination products, so this is not a clean Classic demonstration.</small>}
-  </div>;
+  const props:PanelProps={id,exp,params,setParams,report,setMsg,running,mode,session,play};
+  const Controls=panels.Controls,Analysis=panels.Analysis,Responses=panels.Responses??GenericResponses;
+  const hasLanes=Boolean(session?.events?.length||session?.phases?.length);
 
   return <div className="lab-layout">
     <aside className="browser"><h2>Experiments</h2>{[...new Set(experiments.map(e=>e.category))].map(cat=><section key={cat}><h3>{cat}</h3>{experiments.filter(e=>e.category===cat).map(e=><button className={id===e.id?'active':''} onClick={()=>select(e.id)} key={e.id}>{e.name}</button>)}</section>)}</aside>
     <main className="workspace">
       <div className="workspace-head"><div><span className="eyebrow">{exp.category}</span><h1>{exp.name}</h1><p>{exp.summary}</p></div><span className="guidance">Output: {exp.outputGuidance}</span></div>
       {exp.description&&<section className="analysis experiment-guide"><h2>About this illusion</h2><p>{exp.description}</p><h3>How to listen</h3><p>{exp.howToUse}</p><h3>What to listen for</h3><p>{exp.whatToListenFor}</p></section>}
-      <section className="visualizer" aria-label="signal visualization"><div className="scope-grid"/><SignalCanvas/><div className="signal-orbit"/><div className="legend"><span>GENERATED / MEASURED SIGNAL</span>{products&&<span className="predicted">PREDICTED AUDITORY PRODUCTS</span>}<span className="percept">YOUR PERCEPTION</span></div></section>
-      {comboStimulus&&<section className="analysis"><h3>Generated digital primaries</h3><p>{comboStimulus.voices.map((v:any)=>`${v.id}: ${v.frequencyHz.toFixed(1)} Hz`).join(' · ')}</p><small>Only these two oscillator frequencies are intentionally generated in Classic mode.</small></section>}
-      {products&&<section className="analysis"><h3>Predicted auditory products</h3><p>Difference: {products.differenceHz.toFixed(1)} Hz · 2f1−f2: {products.twoF1MinusF2Hz.toFixed(1)} Hz · 2f2−f1: {products.twoF2MinusF1Hz.toFixed(1)} Hz</p><small>These are mathematical predictions and are not intentionally synthesized in Classic mode.</small></section>}
-      {harms&&<section className="analysis"><h3>Generated harmonics</h3><p><strong>Missing f0: {params.f0} Hz</strong> · no oscillator is generated at this frequency.</p><p>{harms.map((h:any)=>`${h.harmonic}× ${h.frequencyHz.toFixed(1)} Hz`).join(' · ')}</p><small>The listed components are the physical oscillator frequencies. The missing f0 is shown separately as a perceptual reference.</small></section>}
-      {id==='phantom-words'?<section className="reports phantom-reports"><h2>Your perception</h2><p>Write what you actually hear. These reports are stored only in local browser data.</p><label>Left side<textarea aria-label="Left-side words or phrases" value={leftReport} onChange={e=>setLeftReport(e.target.value)} placeholder="Words or phrases that seem to come from the left"/></label><label>Right side<textarea aria-label="Right-side words or phrases" value={rightReport} onChange={e=>setRightReport(e.target.value)} placeholder="Words or phrases that seem to come from the right"/></label><label>Center / other<textarea aria-label="Center words or phrases" value={centerReport} onChange={e=>setCenterReport(e.target.value)} placeholder="Any center stream, other words, accents or sounds"/></label><button onClick={()=>report({left:leftReport,right:rightReport,center:centerReport})}>Save perception report</button></section>:id==='glissando'?<section className="reports phantom-reports"><h2>Your perception</h2><p>Describe the apparent path of the moving glissando. There is no correct answer; room acoustics and listeners can change the percept.</p><textarea aria-label="Glissando perceived trajectory" value={glissReport} onChange={e=>setGlissReport(e.target.value)} placeholder="For example: rises toward the right and falls toward the left"/><button onClick={()=>report({trajectory:glissReport})}>Save trajectory report</button></section>:id==='zwicker'?<section className="reports phantom-reports"><h2>Your perception</h2><p>Report only what remains after the physical noise stops. An estimated pitch is optional.</p><label>Estimated pitch<input aria-label="Zwicker estimated pitch (Hz)" type="number" min="20" max="16000" step="1" value={zwickerPitch} onChange={e=>setZwickerPitch(e.target.value)} placeholder="Hz (optional)"/></label><button onClick={()=>report({heard:true,estimatedPitchHz:zwickerPitch?+zwickerPitch:null})}>Heard a phantom tone</button><button onClick={()=>report({heard:false,estimatedPitchHz:null})}>No clear phantom tone</button></section>:id==='missing-fundamental'?<section className="reports phantom-reports"><h2>Your perception</h2><p>Enter the pitch of the combined sound as you perceive it. The displayed f0 is a reference, not a scored answer.</p><label>Perceived pitch<input aria-label="Missing Fundamental perceived pitch (Hz)" type="number" min="20" max="16000" step="1" value={missingPitch} onChange={e=>setMissingPitch(e.target.value)} placeholder="Hz"/></label><button disabled={!missingPitch} onClick={()=>report({perceivedPitchHz:+missingPitch})}>Save perceived pitch</button></section>:id==='combination-tones'?<section className="reports phantom-reports"><h2>Your perception</h2><p>Report an additional pitch only if you actually hear one. The predicted frequencies are not scored answers.</p><label>Estimated additional pitch<input aria-label="Combination tone perceived pitch (Hz)" type="number" min="20" max="16000" step="1" value={comboPitch} onChange={e=>setComboPitch(e.target.value)} placeholder="Hz (optional)"/></label><label>Description<textarea aria-label="Combination tone description" value={comboDescription} onChange={e=>setComboDescription(e.target.value)} placeholder="Describe any additional pitch, beating, or uncertainty"/></label><button onClick={()=>report({heard:true,estimatedPitchHz:comboPitch?+comboPitch:null,description:comboDescription})}>Heard an additional tone</button><button onClick={()=>report({heard:false,estimatedPitchHz:null,description:comboDescription})}>No clear additional tone</button></section>:<section className="reports"><button onClick={()=>report('rising')}>Rising</button><button onClick={()=>report('falling')}>Falling</button><button onClick={()=>report('ambiguous')}>Ambiguous</button><button onClick={()=>report('one-stream')}>One stream</button><button onClick={()=>report('two-streams')}>Two streams</button><button onClick={()=>report('tone-heard')}>Tone heard</button></section>}
-      {id==='speech-to-song'&&<section className="analysis"><button onClick={recordSpeech}>Record phrase</button><button disabled={!rec.current} onClick={()=>rec.current?.stop()}>Stop recording</button><button disabled={!blobUrl.current} onClick={()=>{const a=new Audio(blobUrl.current);a.loop=true;a.play();setTimeout(()=>{a.pause();a.loop=false},12000)}}>Repeat unchanged phrase</button></section>}
+      <section className="visualizer" aria-label="signal visualization"><div className="scope-grid"/>{hasLanes?<EventLanes session={session} running={running}/>:<><SignalCanvas/><div className="signal-orbit"/></>}<div className="legend"><span>{hasLanes?'PHYSICAL L/R EVENTS':'GENERATED / MEASURED SIGNAL'}</span>{id==='combination-tones'&&<span className="predicted">PREDICTED AUDITORY PRODUCTS</span>}<span className="percept">YOUR PERCEPTION</span></div></section>
+      {hasLanes&&<section className="visualizer measured" aria-label="measured output spectrum"><div className="scope-grid"/><SignalCanvas/><div className="legend"><span>MEASURED OUTPUT SPECTRUM</span></div></section>}
+      {Analysis&&<Analysis key={id} {...props}/>}
+      <Responses key={`r-${id}`} {...props}/>
       <section className="references"><h3>Research references</h3>{exp.references.map((r:any)=><a key={r.url} href={r.url} target="_blank" rel="noreferrer">{r.label}</a>)}</section>
     </main>
-    <aside className="params"><div className="mode-switch"><button className={mode==='classic'?'active':''} onClick={()=>{setMode('classic');setParams({...exp.classicParams})}}>CLASSIC</button><button className={mode==='lab'?'active':''} onClick={()=>setMode('lab')}>LAB</button></div><h2>Parameters</h2>{mode==='classic'?<pre>{JSON.stringify(params,null,2)}</pre>:id==='phantom-words'?phantomControls:id==='zwicker'?zwickerControls:id==='missing-fundamental'?missingControls:id==='combination-tones'?combinationControls:<ParamEditor params={params} setParams={setParams}/>}<button onClick={()=>setParams({...exp.classicParams})}>Reset reference</button><hr/><h3>Perception data</h3><button onClick={exportData}>Export JSON</button><button onClick={()=>{PerceptionStore.clear();setMsg('Local perception data cleared')}}>Clear local data</button><div className="status">{msg}</div></aside>
+    <aside className="params"><div className="mode-switch"><button className={mode==='classic'?'active':''} onClick={()=>{setMode('classic');setParams({...exp.classicParams})}}>CLASSIC</button><button className={mode==='lab'?'active':''} onClick={()=>setMode('lab')}>LAB</button></div><h2>Parameters</h2>{mode==='classic'?<pre>{JSON.stringify(params,null,2)}</pre>:Controls?<Controls key={id} {...props}/>:<ParamEditor params={params} setParams={setParams}/>}<button onClick={()=>setParams({...exp.classicParams})}>Reset reference</button><hr/><h3>Perception data</h3><button onClick={exportData}>Export JSON</button><button onClick={()=>{PerceptionStore.clear();setMsg('Local perception data cleared')}}>Clear local data</button><div className="status">{msg}</div></aside>
     <footer className="transport"><button className="play" disabled={running} onClick={start}>Start</button><button disabled={!running} onClick={stop}>Stop</button></footer>
   </div>;
 }
