@@ -16,3 +16,14 @@ export function rissetFrame(rootBpm=90,layers=5,phase=0,direction=1){rootBpm=cla
 export function scaleStereoEvents(root=60,steps=8){steps=Math.round(clamp(steps,2,12));const major=[0,2,4,5,7,9,11,12].slice(0,steps),asc=major.map(x=>root+x),desc=[...asc].reverse();return asc.map((n,i)=>i%2?{left:desc[i],right:n}:{left:n,right:desc[i]});}
 export function chromaticStereoEvents(root=60,steps=12){steps=Math.round(clamp(steps,2,12));const asc=Array.from({length:steps},(_,i)=>root+i),desc=Array.from({length:steps},(_,i)=>root+steps-1-i);return asc.map((n,i)=>i%2?{left:desc[i],right:n}:{left:n,right:desc[i]});}
 export function continuityCycle(total=1.2,gapStart=.45,gapDuration=.25){total=clamp(total,.5,5);gapStart=clamp(gapStart,.05,total-.1);gapDuration=clamp(gapDuration,.03,total-gapStart);return [{kind:'target',start:0,duration:gapStart,gain:1},{kind:'target',start:gapStart,duration:gapDuration,gain:0},{kind:'masker',start:gapStart,duration:gapDuration,gain:1},{kind:'target',start:gapStart+gapDuration,duration:Math.max(0,total-gapStart-gapDuration),gain:1}];}
+export function phantomWordSchedule(tokens=['no','way'],tokenPeriod=.4,repetitions=24){
+  if(!Array.isArray(tokens)||tokens.length!==2)throw new Error('Phantom Words requires exactly two speech tokens');
+  tokenPeriod=clamp(tokenPeriod,.15,2);repetitions=Math.max(1,Math.round(clamp(repetitions,1,200)));
+  const out=[];
+  for(let i=0;i<repetitions*2;i++){
+    const time=i*tokenPeriod;
+    out.push({time,channel:'left',token:tokens[i%2]});
+    out.push({time,channel:'right',token:tokens[(i+1)%2]});
+  }
+  return out;
+}
