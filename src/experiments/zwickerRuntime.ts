@@ -30,10 +30,15 @@ export function startZwicker(
   const source=ctx.createBufferSource();
   const envelope=ctx.createGain();
   source.buffer=noise;
-  envelope.gain.setValueAtTime(.0001,ctx.currentTime);
+  const settleSeconds=Math.min(.1,Math.max(.03,noiseSeconds*.1));
+  const fadeSeconds=Math.min(.05,Math.max(.015,noiseSeconds*.05));
+  const silentAt=Math.max(.02,noiseSeconds-settleSeconds);
+  const fadeStart=Math.max(.02,silentAt-fadeSeconds);
+  envelope.gain.setValueAtTime(0,ctx.currentTime);
   envelope.gain.linearRampToValueAtTime(level,ctx.currentTime+.02);
-  envelope.gain.setValueAtTime(level,ctx.currentTime+Math.max(.02,noiseSeconds-.03));
-  envelope.gain.linearRampToValueAtTime(.0001,ctx.currentTime+noiseSeconds);
+  envelope.gain.setValueAtTime(level,ctx.currentTime+fadeStart);
+  envelope.gain.linearRampToValueAtTime(0,ctx.currentTime+silentAt);
+  envelope.gain.setValueAtTime(0,ctx.currentTime+noiseSeconds);
   source.connect(envelope);
 
   const filters:BiquadFilterNode[]=[];
