@@ -88,3 +88,26 @@ test('Missing Fundamental separates the absent f0 from generated harmonics and r
   await page.getByRole('button',{name:'Stop',exact:true}).click();
   await expect(page.locator('.status')).toContainText('Stopped');
 });
+
+test('Combination Tone Explorer keeps predicted products separate from generated primaries',async({page})=>{
+  await page.goto('/Auditory-Illusion-Laboratory/');
+  await page.getByRole('button',{name:'Combination Tone Explorer'}).click();
+  await expect(page.getByRole('heading',{name:'How to listen'})).toBeVisible();
+  await expect(page.getByText(/not intentionally present/i)).toBeVisible();
+  await expect(page.getByText(/Difference: 200.0 Hz/)).toBeVisible();
+  await expect(page.getByText(/2f1−f2: 500.0 Hz/)).toBeVisible();
+  await expect(page.getByText(/2f2−f1: 1100.0 Hz/)).toBeVisible();
+  await expect(page.getByLabel('Combination tone perceived pitch (Hz)')).toBeVisible();
+
+  await page.getByRole('button',{name:'LAB',exact:true}).click();
+  await expect(page.getByLabel('Primary f1 (Hz)')).toBeVisible();
+  await expect(page.getByLabel('Primary f2 (Hz)')).toBeVisible();
+  await expect(page.getByLabel('Primary level')).toBeVisible();
+  await expect(page.getByLabel('Primary balance')).toBeVisible();
+  await expect(page.getByLabel('Waveform')).toBeVisible();
+
+  await page.getByRole('button',{name:'Start',exact:true}).click();
+  await expect(page.locator('.status')).toContainText('Playing');
+  await page.getByRole('button',{name:'Stop',exact:true}).click();
+  await expect(page.locator('.status')).toContainText('Stopped');
+});
