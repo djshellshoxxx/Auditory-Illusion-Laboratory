@@ -5,6 +5,7 @@ import {startGlissando,stopGlissando} from './glissandoRuntime';
 import {startZwicker} from './zwickerRuntime';
 import {startMissingFundamental} from './missingFundamentalRuntime';
 import {startCombinationTones} from './combinationTonesRuntime';
+import {startPrecedence} from './precedenceRuntime';
 let stopCurrent:()=>void=()=>{};
 const safe=(v:number,a:number,b:number)=>Math.min(b,Math.max(a,Number(v)||a));
 
@@ -41,7 +42,7 @@ export async function startExperiment(id:string,p:Record<string,any>,onStatus?:(
   else if(id==='zwicker')startZwicker(ctx,bus,p,clean,onStatus);
   else if(id==='missing-fundamental')startMissingFundamental(ctx,bus,p,clean);
   else if(id==='combination-tones')startCombinationTones(ctx,bus,p,clean);
-  else if(id==='precedence'){const source=ctx.createOscillator(),gain=ctx.createGain(),left=ctx.createStereoPanner(),right=ctx.createStereoPanner(),delay=ctx.createDelay(.08);source.frequency.value=330;gain.gain.value=.045;left.pan.value=(p.first==='right'?1:-1);right.pan.value=-left.pan.value;delay.delayTime.value=safe(p.delayMs,0,40)/1000;source.connect(gain);gain.connect(left).connect(bus);gain.connect(delay).connect(right).connect(bus);source.start();clean.push(()=>{try{source.stop()}catch{};source.disconnect();gain.disconnect();left.disconnect();right.disconnect();delay.disconnect()})}
+  else if(id==='precedence')startPrecedence(ctx,bus,p,clean);
   else if(id==='phantom-words')await startPhantomWords(ctx,bus,p,clean);
   else if(id==='mysterious-melody'){const reveal=safe(p.reveal??0,0,1),depth=Math.round(safe(p.depth??3,0,4)*(1-reveal)),notes=scrambleOctaves([60,60,67,67,69,69,67,65,65,64,64,62,62,60],depth,4);let i=0;const tid=setInterval(()=>toneBurst(ctx,bus,midiToHz(notes[i++%notes.length]),.16,0,.05),1000/safe(p.tempo,1,10));clean.push(()=>clearInterval(tid))}
   else if(id==='speech-to-song')throw new Error('Use Record Phrase, then Repeat in the speech panel.');
