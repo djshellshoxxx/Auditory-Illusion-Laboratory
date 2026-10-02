@@ -44,3 +44,25 @@ test('Glissando shows speaker guidance and starts/stops the corrected stimulus',
   await page.getByRole('button',{name:'Stop',exact:true}).click();
   await expect(page.locator('.status')).toContainText('Stopped');
 });
+
+test('Zwicker exposes the induction/silence workflow, lab controls and perception report',async({page})=>{
+  await page.goto('/Auditory-Illusion-Laboratory/');
+  await page.getByRole('button',{name:'Zwicker Phantom Tone'}).click();
+  await expect(page.getByRole('heading',{name:'How to listen'})).toBeVisible();
+  await expect(page.getByText(/five seconds of notched broadband noise/i)).toBeVisible();
+  await expect(page.getByLabel('Zwicker estimated pitch (Hz)')).toBeVisible();
+  await expect(page.getByRole('button',{name:'Heard a phantom tone'})).toBeVisible();
+  await expect(page.getByRole('button',{name:'No clear phantom tone'})).toBeVisible();
+
+  await page.getByRole('button',{name:'LAB',exact:true}).click();
+  await expect(page.getByLabel('Notch center (Hz)')).toBeVisible();
+  await expect(page.getByLabel('Notch width (octaves)')).toBeVisible();
+  await page.getByLabel('Noise duration (seconds)').fill('0.35');
+  await page.getByLabel('Silent listening window (seconds)').fill('0.5');
+  await page.getByRole('button',{name:'Start',exact:true}).click();
+  await expect(page.locator('.status')).toContainText('Notched noise playing');
+  await page.waitForTimeout(500);
+  await expect(page.locator('.status')).toContainText('Listen now: digital silence');
+  await page.waitForTimeout(500);
+  await expect(page.locator('.status')).toContainText('Trial complete');
+});

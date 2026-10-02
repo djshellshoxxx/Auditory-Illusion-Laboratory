@@ -2,6 +2,7 @@ import {audioEngine} from '../audio/AudioEngine';
 import {midiToHz, shepardFrame, rissetFrame, missingFundamental, stereoAlternate, scaleStereoEvents, chromaticStereoEvents, scrambleOctaves} from '../audio/core.js';
 import {startPhantomWords} from './phantomWords';
 import {startGlissando,stopGlissando} from './glissandoRuntime';
+import {startZwicker} from './zwickerRuntime';
 let stopCurrent:()=>void=()=>{};
 const safe=(v:number,a:number,b:number)=>Math.min(b,Math.max(a,Number(v)||a));
 
@@ -22,7 +23,7 @@ function stereoSequence(ctx:AudioContext,bus:AudioNode,events:{left:number,right
 function tritoneSequence(ctx:AudioContext,bus:AudioNode,p:Record<string,any>,clean:Cleanup[]){let second=false;const burst=(root:number)=>{const fs=Array.from({length:6},(_,i)=>midiToHz(root-24+i*12)),center=safe(p.center,150,5000),width=safe(p.width,.3,4);const logs=fs.map(f=>Math.log2(f/center)),raw=logs.map(x=>Math.exp(-.5*(x/width)**2)),m=Math.max(...raw);fs.forEach((f,i)=>toneBurst(ctx,bus,f,.38,0,.035*raw[i]/m))};burst(60+(p.rootClass??0));const id=setInterval(()=>{second=!second;burst(60+(p.rootClass??0)+(second?6:0))},620);clean.push(()=>clearInterval(id));}
 function continuity(ctx:AudioContext,bus:AudioNode,p:Record<string,any>,clean:Cleanup[]){const cycle=1.25,gapStart=.47,gap=safe(p.gap,.06,.6),target=safe(p.target,100,4000),maskLevel=safe(p.maskLevel,.03,.5);const run=()=>{const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.value=target;g.gain.value=.045;o.connect(g).connect(bus);const t=ctx.currentTime;g.gain.setValueAtTime(.045,t);g.gain.setTargetAtTime(.00001,t+gapStart,.002);g.gain.setValueAtTime(.00001,t+gapStart+.006);g.gain.setTargetAtTime(.045,t+gapStart+gap,.002);o.start(t);o.stop(t+cycle);const len=Math.max(1,Math.round(ctx.sampleRate*gap)),buf=ctx.createBuffer(1,len,ctx.sampleRate),d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*maskLevel;const src=ctx.createBufferSource();src.buffer=buf;src.connect(bus);src.start(t+gapStart);src.stop(t+gapStart+gap)};run();const id=setInterval(run,cycle*1000);clean.push(()=>clearInterval(id));}
 
-export async function startExperiment(id:string,p:Record<string,any>){stopExperiment();
+export async function startExperiment(id:string,p:Record<string,any>,onStatus?:(message:string)=>void){stopExperiment();
   if(id==='glissando'){await startGlissando(p);return}
   const ctx=await audioEngine.ensureRunning(),bus=await audioEngine.createInputBus(),clean:Cleanup[]=[];
   if(id==='shepard')continuousShepard(ctx,bus,p,true,clean);
@@ -35,7 +36,7 @@ export async function startExperiment(id:string,p:Record<string,any>){stopExperi
   else if(id==='tritone')tritoneSequence(ctx,bus,p,clean);
   else if(id==='streaming'){const seq=[p.a??440,p.b??659.25,p.a??440,0],rate=safe(p.rate,1,12);let i=0;const tid=setInterval(()=>{const f=seq[i++%4];if(f)toneBurst(ctx,bus,f,.11,0,.05)},1000/rate);clean.push(()=>clearInterval(tid))}
   else if(id==='continuity')continuity(ctx,bus,p,clean);
-  else if(id==='zwicker'){const duration=safe(p.duration,1,10),n=ctx.createBuffer(1,ctx.sampleRate*duration,ctx.sampleRate),d=n.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*safe(p.level,.02,.35);const src=ctx.createBufferSource(),notch=ctx.createBiquadFilter();src.buffer=n;notch.type='notch';notch.frequency.value=safe(p.center,200,10000);notch.Q.value=safe(p.center,200,10000)/safe(p.width,100,5000);src.connect(notch).connect(bus);src.start();clean.push(()=>{try{src.stop()}catch{};src.disconnect();notch.disconnect()})}
+  else if(id==='zwicker')startZwicker(ctx,bus,p,clean,onStatus);
   else if(id==='missing-fundamental')missingFundamental(p.f0,p.first,p.last).forEach((h:any)=>{const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.value=h.frequency;g.gain.value=.06/h.harmonic;o.connect(g).connect(bus);o.start();clean.push(()=>{try{o.stop()}catch{};o.disconnect();g.disconnect()})});
   else if(id==='combination-tones'){[p.f1,p.f2].forEach((f:number)=>{const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.value=safe(f,20,12000);g.gain.value=safe(p.level,.02,.18);o.connect(g).connect(bus);o.start();clean.push(()=>{try{o.stop()}catch{};o.disconnect();g.disconnect()})})}
   else if(id==='precedence'){const source=ctx.createOscillator(),gain=ctx.createGain(),left=ctx.createStereoPanner(),right=ctx.createStereoPanner(),delay=ctx.createDelay(.08);source.frequency.value=330;gain.gain.value=.045;left.pan.value=(p.first==='right'?1:-1);right.pan.value=-left.pan.value;delay.delayTime.value=safe(p.delayMs,0,40)/1000;source.connect(gain);gain.connect(left).connect(bus);gain.connect(delay).connect(right).connect(bus);source.start();clean.push(()=>{try{source.stop()}catch{};source.disconnect();gain.disconnect();left.disconnect();right.disconnect();delay.disconnect()})}
