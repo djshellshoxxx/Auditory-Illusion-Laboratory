@@ -183,3 +183,26 @@ test('Speech-to-Song asks for a recording before Start',async({page})=>{
   await page.getByRole('button',{name:'Start',exact:true}).click();
   await expect(page.locator('.status')).toContainText('Record a short phrase first');
 });
+
+test('Infinite Motion: keys play, octave shift works, and Panic stops voices every time',async({page})=>{
+  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto('/Auditory-Illusion-Laboratory/');
+  await page.getByRole('button',{name:'Infinite Motion'}).click();
+  const voices=page.getByLabel('Voices sounding');
+  await expect(voices).toHaveText('Voices: 0');
+  await page.keyboard.down('a');await expect(voices).toHaveText('Voices: 1');
+  await page.keyboard.up('a');await expect(voices).toHaveText('Voices: 0');
+  for(let round=1;round<=2;round++){
+    await page.keyboard.down('d');await expect(voices).toHaveText('Voices: 1');
+    await page.getByRole('button',{name:'PANIC STOP'}).click();
+    await expect(voices).toHaveText('Voices: 0');
+    await page.keyboard.up('d');
+  }
+  await page.keyboard.press('x');await expect(page.getByLabel('Keyboard octave')).toContainText('+1');
+  await page.getByRole('button',{name:'Drone Hold'}).click();await expect(voices).toHaveText('Voices: 1');
+  await page.getByRole('button',{name:'Stop All'}).click();await expect(voices).toHaveText('Voices: 0');
+  await page.getByLabel('Scene').selectOption('Contradiction');
+  await page.getByRole('button',{name:'Restore coherent'}).click();
+  const values=await page.locator('.lane output').allTextContents();expect(new Set(values).size).toBe(1);
+  expect(errors).toEqual([]);
+});
