@@ -14,6 +14,15 @@ test('phantom words schedule presents the same two-token sequence to both channe
   assert.equal(left[1].time-left[0].time,0.4);
 });
 
+test('phantom words schedule supports a lab track offset distinct from the classic one-token offset',()=>{
+  const s=phantomWordSchedule(['no','way'],0.4,2,0.2);
+  const right=s.filter(e=>e.channel==='right');
+  assert.equal(right[0].time,0.2);
+  assert.equal(right[0].token,'no');
+  assert.equal(right[1].time,0.6);
+  assert.equal(right[1].token,'way');
+});
+
 test('phantom words schedule is deterministic and alternates simultaneous opposite tokens',()=>{
   const s=phantomWordSchedule(['high','low'],0.25,2);
   for(let t=0;t<4;t++){
@@ -32,5 +41,6 @@ test('phantom words catalog entry explains the illusion and loudspeaker setup',(
   assert.match(exp.whatToListenFor,/word|phrase|stream/i);
   assert.equal(exp.outputGuidance,'stereo-speakers');
   assert.equal(exp.classicParams.tokenPeriod,.4);
+  assert.equal(exp.classicParams.offset,.4);
   assert.equal(exp.classicParams.repetitions,24);
 });
