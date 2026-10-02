@@ -9,6 +9,7 @@ import {speechToSongPanels} from './speechToSong';
 import {octavePanels} from './octave';
 import {scalePanels} from './scale';
 import {chromaticPanels} from './chromatic';
+import {cambiataPanels} from './cambiata';
 /** Registry: experiment id → its Lab controls, analysis and response panels. */
 export const experimentPanels:Record<string,ExperimentPanels>={
   'phantom-words':phantomWordsPanels,
@@ -20,5 +21,6 @@ export const experimentPanels:Record<string,ExperimentPanels>={
   'speech-to-song':speechToSongPanels,
   octave:octavePanels,
   scale:scalePanels,
-  chromatic:chromaticPanels
+  chromatic:chromaticPanels,
+  cambiata:cambiataPanels
 };
