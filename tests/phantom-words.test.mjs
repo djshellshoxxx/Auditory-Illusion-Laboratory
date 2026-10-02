@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {phantomWordSchedule} from '../src/audio/core.js';
+import {experiments} from '../src/experiments/catalog.js';
 
 test('phantom words schedule presents the same two-token sequence to both channels with a one-token offset',()=>{
   const s=phantomWordSchedule(['no','way'],0.4,3);
@@ -20,4 +21,16 @@ test('phantom words schedule is deterministic and alternates simultaneous opposi
     assert.equal(pair.length,2);
     assert.notEqual(pair[0].token,pair[1].token);
   }
+});
+
+test('phantom words catalog entry explains the illusion and loudspeaker setup',()=>{
+  const exp=experiments.find(e=>e.id==='phantom-words');
+  assert.ok(exp);
+  assert.match(exp.description,/speech|word/i);
+  assert.match(exp.howToUse,/speaker/i);
+  assert.match(exp.howToUse,/headphones/i);
+  assert.match(exp.whatToListenFor,/word|phrase|stream/i);
+  assert.equal(exp.outputGuidance,'stereo-speakers');
+  assert.equal(exp.classicParams.tokenPeriod,.4);
+  assert.equal(exp.classicParams.repetitions,24);
 });
