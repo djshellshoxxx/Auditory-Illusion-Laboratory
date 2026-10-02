@@ -22,3 +22,12 @@ test('Phantom Words shows listening instructions, specific reports and lab token
   await expect(page.getByRole('button',{name:'Record token A'})).toBeVisible();
   await expect(page.getByRole('button',{name:'Record token B'})).toBeVisible();
 });
+
+test('Phantom Words built-in classic speech starts and stops through the audio engine',async({page})=>{
+  await page.goto('/Auditory-Illusion-Laboratory/');
+  await page.getByRole('button',{name:'Phantom Words'}).click();
+  await page.getByRole('button',{name:'Start'}).click();
+  await expect(page.locator('.status')).toContainText('Playing');
+  await page.getByRole('button',{name:'Stop'}).click();
+  await expect(page.locator('.status')).toContainText('Stopped');
+});
