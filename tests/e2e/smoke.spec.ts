@@ -71,7 +71,7 @@ test('Missing Fundamental separates the absent f0 from generated harmonics and r
   await page.goto('/Auditory-Illusion-Laboratory/');
   await page.getByRole('button',{name:'Missing Fundamental'}).click();
   await expect(page.getByRole('heading',{name:'How to listen'})).toBeVisible();
-  await expect(page.getByText(/physically absent/i)).toBeVisible();
+  await expect(page.getByText(/The Missing Fundamental illusion demonstrates virtual pitch/i)).toBeVisible();
   await expect(page.getByText(/Missing f0: 110 Hz/i)).toBeVisible();
   await expect(page.getByLabel('Missing Fundamental perceived pitch (Hz)')).toBeVisible();
   await expect(page.getByRole('button',{name:'Save perceived pitch'})).toBeVisible();
