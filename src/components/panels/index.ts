@@ -14,6 +14,7 @@ import {shepardPanels} from './shepard';
 import {rissetGlidePanels} from './rissetGlide';
 import {rissetRhythmPanels} from './rissetRhythm';
 import {tritonePanels} from './tritone';
+import {streamingPanels} from './streaming';
 /** Registry: experiment id → its Lab controls, analysis and response panels. */
 export const experimentPanels:Record<string,ExperimentPanels>={
   'phantom-words':phantomWordsPanels,
@@ -30,5 +31,6 @@ export const experimentPanels:Record<string,ExperimentPanels>={
   shepard:shepardPanels,
   'risset-glide':rissetGlidePanels,
   'risset-rhythm':rissetRhythmPanels,
-  tritone:tritonePanels
+  tritone:tritonePanels,
+  streaming:streamingPanels
 };

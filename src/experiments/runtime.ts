@@ -14,6 +14,7 @@ import {startShepard} from './shepardRuntime';
 import {startRissetGlide} from './rissetGlideRuntime';
 import {startRissetRhythm} from './rissetRhythmRuntime';
 import {startTritone} from './tritoneRuntime';
+import {startStreaming} from './streamingRuntime';
 import {startPrecedence} from './precedenceRuntime';
 let stopCurrent:()=>void=()=>{};
 const safe=(v:number,a:number,b:number)=>Math.min(b,Math.max(a,Number(v)||a));
@@ -37,7 +38,7 @@ export async function startExperiment(id:string,p:Record<string,any>,onStatus?:(
   else if(id==='chromatic')run.session=startChromatic(ctx,bus,p,clean);
   else if(id==='cambiata')run.session=startCambiata(ctx,bus,p,clean);
   else if(id==='tritone')run.session=startTritone(ctx,bus,p,clean);
-  else if(id==='streaming'){const seq=[p.a??440,p.b??659.25,p.a??440,0],rate=safe(p.rate,1,12);let i=0;const tid=setInterval(()=>{const f=seq[i++%4];if(f)toneBurst(ctx,bus,f,.11,0,.05)},1000/rate);clean.push(()=>clearInterval(tid))}
+  else if(id==='streaming')run.session=startStreaming(ctx,bus,p,clean);
   else if(id==='continuity')continuity(ctx,bus,p,clean);
   else if(id==='zwicker')startZwicker(ctx,bus,p,clean,onStatus);
   else if(id==='missing-fundamental')startMissingFundamental(ctx,bus,p,clean);
