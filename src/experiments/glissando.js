@@ -1,0 +1,3 @@
+export const GLISSANDO_CLASSIC={fixedHz:262,lowHz:131,highHz:523,cycleSeconds:2.5,swapSeconds:.238,channelSwap:false};
+export function glissandoFrequencyAt(seconds,p=GLISSANDO_CLASSIC){const c=Math.max(.1,p.cycleSeconds||2.5),phase=((seconds%c)+c)%c/c,half=phase<=.5?phase*2:(1-phase)*2;return p.lowHz*Math.pow(p.highHz/p.lowHz,half)}
+export function glissandoSpeakerAt(seconds,p=GLISSANDO_CLASSIC){const odd=Math.floor(Math.max(0,seconds)/(p.swapSeconds||.238))%2===1;const swap=Boolean(p.channelSwap);const fixedLeft=odd===swap;return fixedLeft?{fixed:'left',glide:'right'}:{fixed:'right',glide:'left'}}
