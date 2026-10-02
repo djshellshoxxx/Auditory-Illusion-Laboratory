@@ -16,6 +16,7 @@ import {startRissetRhythm} from './rissetRhythmRuntime';
 import {startTritone} from './tritoneRuntime';
 import {startStreaming} from './streamingRuntime';
 import {startContinuity} from './continuityRuntime';
+import {startSpeechToSong} from './speechToSongRuntime';
 import {startPrecedence} from './precedenceRuntime';
 let stopCurrent:()=>void=()=>{};
 const safe=(v:number,a:number,b:number)=>Math.min(b,Math.max(a,Number(v)||a));
@@ -46,7 +47,7 @@ export async function startExperiment(id:string,p:Record<string,any>,onStatus?:(
   else if(id==='precedence')startPrecedence(ctx,bus,p,clean);
   else if(id==='phantom-words')await startPhantomWords(ctx,bus,p,clean);
   else if(id==='mysterious-melody'){const reveal=safe(p.reveal??0,0,1),depth=Math.round(safe(p.depth??3,0,4)*(1-reveal)),notes=scrambleOctaves([60,60,67,67,69,69,67,65,65,64,64,62,62,60],depth,4);let i=0;const tid=setInterval(()=>toneBurst(ctx,bus,midiToHz(notes[i++%notes.length]),.16,0,.05),1000/safe(p.tempo,1,10));clean.push(()=>clearInterval(tid))}
-  else if(id==='speech-to-song')throw new Error('Use Record Phrase, then Repeat in the speech panel.');
+  else if(id==='speech-to-song')run.session=await startSpeechToSong(ctx,bus,p,clean);
   stopCurrent=()=>{for(const f of clean.splice(0)){try{f()}catch{}}};audioEngine.registerCleanup(stopCurrent);
   return run.session;
 }
