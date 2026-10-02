@@ -66,3 +66,25 @@ test('Zwicker exposes the induction/silence workflow, lab controls and perceptio
   await page.waitForTimeout(500);
   await expect(page.locator('.status')).toContainText('Trial complete');
 });
+
+test('Missing Fundamental separates the absent f0 from generated harmonics and records perceived pitch',async({page})=>{
+  await page.goto('/Auditory-Illusion-Laboratory/');
+  await page.getByRole('button',{name:'Missing Fundamental'}).click();
+  await expect(page.getByRole('heading',{name:'How to listen'})).toBeVisible();
+  await expect(page.getByText(/The Missing Fundamental illusion demonstrates virtual pitch/i)).toBeVisible();
+  await expect(page.getByText(/Missing f0: 110 Hz/i)).toBeVisible();
+  await expect(page.getByLabel('Missing Fundamental perceived pitch (Hz)')).toBeVisible();
+  await expect(page.getByRole('button',{name:'Save perceived pitch'})).toBeVisible();
+
+  await page.getByRole('button',{name:'LAB',exact:true}).click();
+  await expect(page.getByLabel('Fundamental reference (Hz)')).toBeVisible();
+  await expect(page.getByLabel('First generated harmonic')).toBeVisible();
+  await expect(page.getByLabel('Last generated harmonic')).toBeVisible();
+  await expect(page.getByLabel('Amplitude rolloff (dB/octave)')).toBeVisible();
+  await expect(page.getByLabel('Phase mode')).toBeVisible();
+
+  await page.getByRole('button',{name:'Start',exact:true}).click();
+  await expect(page.locator('.status')).toContainText('Playing');
+  await page.getByRole('button',{name:'Stop',exact:true}).click();
+  await expect(page.locator('.status')).toContainText('Stopped');
+});
