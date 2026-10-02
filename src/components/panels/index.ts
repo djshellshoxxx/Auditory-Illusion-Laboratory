@@ -15,6 +15,7 @@ import {rissetGlidePanels} from './rissetGlide';
 import {rissetRhythmPanels} from './rissetRhythm';
 import {tritonePanels} from './tritone';
 import {streamingPanels} from './streaming';
+import {continuityPanels} from './continuity';
 /** Registry: experiment id → its Lab controls, analysis and response panels. */
 export const experimentPanels:Record<string,ExperimentPanels>={
   'phantom-words':phantomWordsPanels,
@@ -32,5 +33,6 @@ export const experimentPanels:Record<string,ExperimentPanels>={
   'risset-glide':rissetGlidePanels,
   'risset-rhythm':rissetRhythmPanels,
   tritone:tritonePanels,
-  streaming:streamingPanels
+  streaming:streamingPanels,
+  continuity:continuityPanels
 };

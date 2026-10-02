@@ -15,6 +15,7 @@ import {startRissetGlide} from './rissetGlideRuntime';
 import {startRissetRhythm} from './rissetRhythmRuntime';
 import {startTritone} from './tritoneRuntime';
 import {startStreaming} from './streamingRuntime';
+import {startContinuity} from './continuityRuntime';
 import {startPrecedence} from './precedenceRuntime';
 let stopCurrent:()=>void=()=>{};
 const safe=(v:number,a:number,b:number)=>Math.min(b,Math.max(a,Number(v)||a));
@@ -25,7 +26,6 @@ function toneBurst(ctx:AudioContext,bus:AudioNode,f:number,duration=.16,pan=0,ga
   g.gain.setValueAtTime(.0001,ctx.currentTime);g.gain.exponentialRampToValueAtTime(Math.max(.0002,gain),ctx.currentTime+.008);g.gain.exponentialRampToValueAtTime(.0001,ctx.currentTime+duration);
   o.connect(g).connect(p).connect(bus);o.start();o.stop(ctx.currentTime+duration+.01);return()=>{try{o.stop()}catch{};o.disconnect();g.disconnect();p.disconnect()};
 }
-function continuity(ctx:AudioContext,bus:AudioNode,p:Record<string,any>,clean:Cleanup[]){const cycle=1.25,gapStart=.47,gap=safe(p.gap,.06,.6),target=safe(p.target,100,4000),maskLevel=safe(p.maskLevel,.03,.5);const run=()=>{const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.value=target;g.gain.value=.045;o.connect(g).connect(bus);const t=ctx.currentTime;g.gain.setValueAtTime(.045,t);g.gain.setTargetAtTime(.00001,t+gapStart,.002);g.gain.setValueAtTime(.00001,t+gapStart+.006);g.gain.setTargetAtTime(.045,t+gapStart+gap,.002);o.start(t);o.stop(t+cycle);const len=Math.max(1,Math.round(ctx.sampleRate*gap)),buf=ctx.createBuffer(1,len,ctx.sampleRate),d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*maskLevel;const src=ctx.createBufferSource();src.buffer=buf;src.connect(bus);src.start(t+gapStart);src.stop(t+gapStart+gap)};run();const id=setInterval(run,cycle*1000);clean.push(()=>clearInterval(id));}
 
 export async function startExperiment(id:string,p:Record<string,any>,onStatus?:(message:string)=>void):Promise<ExperimentSession|void>{stopExperiment();
   if(id==='glissando'){await startGlissando(p);return}
@@ -39,7 +39,7 @@ export async function startExperiment(id:string,p:Record<string,any>,onStatus?:(
   else if(id==='cambiata')run.session=startCambiata(ctx,bus,p,clean);
   else if(id==='tritone')run.session=startTritone(ctx,bus,p,clean);
   else if(id==='streaming')run.session=startStreaming(ctx,bus,p,clean);
-  else if(id==='continuity')continuity(ctx,bus,p,clean);
+  else if(id==='continuity')run.session=startContinuity(ctx,bus,p,clean);
   else if(id==='zwicker')startZwicker(ctx,bus,p,clean,onStatus);
   else if(id==='missing-fundamental')startMissingFundamental(ctx,bus,p,clean);
   else if(id==='combination-tones')startCombinationTones(ctx,bus,p,clean);
