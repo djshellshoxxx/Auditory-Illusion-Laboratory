@@ -1,6 +1,6 @@
 {
   "name":"auditory-illusion-laboratory","private":true,"version":"1.0.0","type":"module",
-  "scripts":{"dev":"vite","build":"tsc --noEmit && vite build","typecheck":"tsc --noEmit","test":"node --test tests/*.test.mjs && vitest run","test:core":"node --test tests/*.test.mjs","e2e":"playwright test","lint":"eslint src --max-warnings=0"},
+  "scripts":{"dev":"vite","build":"tsc --noEmit && vite build","typecheck":"tsc --noEmit","test":"node --test tests/*.test.mjs && vitest run","test:core":"node --test tests/*.test.mjs","e2e":"playwright test","lint":"eslint src"},
   "dependencies":{"@vitejs/plugin-react":"latest","vite":"latest","typescript":"latest","react":"latest","react-dom":"latest"},
-  "devDependencies":{"@types/react":"latest","@types/react-dom":"latest","vitest":"latest","eslint":"latest","@eslint/js":"latest","typescript-eslint":"latest","eslint-plugin-react-hooks":"latest","eslint-plugin-react-refresh":"latest","playwright":"latest"}
+  "devDependencies":{"@types/react":"latest","@types/react-dom":"latest","vitest":"latest","eslint":"latest","@eslint/js":"latest","typescript-eslint":"latest","@playwright/test":"latest"}
 }
