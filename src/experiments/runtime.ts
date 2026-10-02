@@ -10,6 +10,7 @@ import {startOctave} from './octaveRuntime';
 import {startScale} from './scaleRuntime';
 import {startChromatic} from './chromaticRuntime';
 import {startCambiata} from './cambiataRuntime';
+import {startShepard} from './shepardRuntime';
 import {startPrecedence} from './precedenceRuntime';
 let stopCurrent:()=>void=()=>{};
 const safe=(v:number,a:number,b:number)=>Math.min(b,Math.max(a,Number(v)||a));
@@ -33,7 +34,7 @@ function continuity(ctx:AudioContext,bus:AudioNode,p:Record<string,any>,clean:Cl
 export async function startExperiment(id:string,p:Record<string,any>,onStatus?:(message:string)=>void):Promise<ExperimentSession|void>{stopExperiment();
   if(id==='glissando'){await startGlissando(p);return}
   const ctx=await audioEngine.ensureRunning(),bus=await audioEngine.createInputBus(),clean:Cleanup[]=[];const run:{session?:ExperimentSession}={};
-  if(id==='shepard')continuousShepard(ctx,bus,p,true,clean);
+  if(id==='shepard')run.session=startShepard(ctx,bus,p,clean);
   else if(id==='risset-glide')continuousShepard(ctx,bus,p,false,clean);
   else if(id==='risset-rhythm')rissetRhythm(ctx,bus,p,clean);
   else if(id==='octave')run.session=startOctave(ctx,bus,p,clean);

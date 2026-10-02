@@ -10,6 +10,7 @@ import {octavePanels} from './octave';
 import {scalePanels} from './scale';
 import {chromaticPanels} from './chromatic';
 import {cambiataPanels} from './cambiata';
+import {shepardPanels} from './shepard';
 /** Registry: experiment id → its Lab controls, analysis and response panels. */
 export const experimentPanels:Record<string,ExperimentPanels>={
   'phantom-words':phantomWordsPanels,
@@ -22,5 +23,6 @@ export const experimentPanels:Record<string,ExperimentPanels>={
   octave:octavePanels,
   scale:scalePanels,
   chromatic:chromaticPanels,
-  cambiata:cambiataPanels
+  cambiata:cambiataPanels,
+  shepard:shepardPanels
 };
