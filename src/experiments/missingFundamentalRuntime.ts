@@ -17,11 +17,13 @@ export function startMissingFundamental(ctx:AudioContext,bus:AudioNode,params:Pa
   const oscillators=components.map(component=>{
     const oscillator=ctx.createOscillator();
     const gain=ctx.createGain();
-    oscillator.type='sine';
+    const real=new Float32Array([0,Math.sin(component.phaseRadians)]);
+    const imag=new Float32Array([0,Math.cos(component.phaseRadians)]);
+    oscillator.setPeriodicWave(ctx.createPeriodicWave(real,imag,{disableNormalization:true}));
     oscillator.frequency.value=component.frequencyHz;
     gain.gain.value=component.gain;
     oscillator.connect(gain).connect(mix);
-    oscillator.start(ctx.currentTime,component.phaseRadians/(Math.PI*2*component.frequencyHz));
+    oscillator.start();
     return {oscillator,gain};
   });
 
