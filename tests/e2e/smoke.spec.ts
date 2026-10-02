@@ -31,3 +31,16 @@ test('Phantom Words built-in classic speech starts and stops through the audio e
   await page.getByRole('button',{name:'Stop',exact:true}).click();
   await expect(page.locator('.status')).toContainText('Stopped');
 });
+
+test('Glissando shows speaker guidance and starts/stops the corrected stimulus',async({page})=>{
+  await page.goto('/Auditory-Illusion-Laboratory/');
+  await page.getByRole('button',{name:'Glissando Illusion'}).click();
+  await expect(page.getByRole('heading',{name:'How to listen'})).toBeVisible();
+  await expect(page.getByText(/two separated stereo loudspeakers/i)).toBeVisible();
+  await expect(page.getByText(/Headphones can reproduce/i)).toBeVisible();
+  await page.getByRole('button',{name:'Start',exact:true}).click();
+  await expect(page.locator('.status')).toContainText('Playing');
+  await page.waitForTimeout(600);
+  await page.getByRole('button',{name:'Stop',exact:true}).click();
+  await expect(page.locator('.status')).toContainText('Stopped');
+});
