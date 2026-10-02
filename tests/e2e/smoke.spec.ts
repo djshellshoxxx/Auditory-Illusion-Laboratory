@@ -111,3 +111,27 @@ test('Combination Tone Explorer keeps predicted products separate from generated
   await page.getByRole('button',{name:'Stop',exact:true}).click();
   await expect(page.locator('.status')).toContainText('Stopped');
 });
+
+test('Precedence / Haas uses discrete lead-lag transients and experiment-specific reporting',async({page})=>{
+  await page.goto('/Auditory-Illusion-Laboratory/');
+  await page.getByRole('button',{name:'Precedence / Haas Explorer'}).click();
+  await expect(page.getByRole('heading',{name:'How to listen'})).toBeVisible();
+  await expect(page.getByText(/stereo speakers/i)).toBeVisible();
+  await expect(page.getByRole('button',{name:'One fused sound'})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Two distinct sounds'})).toBeVisible();
+  await expect(page.getByLabel('Precedence perceived location')).toBeVisible();
+
+  await page.getByRole('button',{name:'LAB',exact:true}).click();
+  await expect(page.getByLabel('Lead-lag delay (ms)')).toBeVisible();
+  await expect(page.getByLabel('Lead side')).toBeVisible();
+  await expect(page.getByLabel('Source type')).toBeVisible();
+  await expect(page.getByLabel('Transient duration (ms)')).toBeVisible();
+  await expect(page.getByLabel('Repetition interval (ms)')).toBeVisible();
+  await expect(page.getByLabel('Lead-vs-lag level difference (dB)')).toBeVisible();
+
+  await page.getByRole('button',{name:'Start',exact:true}).click();
+  await expect(page.locator('.status')).toContainText('Playing');
+  await page.waitForTimeout(100);
+  await page.getByRole('button',{name:'Stop',exact:true}).click();
+  await expect(page.locator('.status')).toContainText('Stopped');
+});
