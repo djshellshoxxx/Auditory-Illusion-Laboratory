@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {COMBINATION_TONES_CLASSIC, normalizeCombinationToneParams, buildCombinationToneStimulus, predictedCombinationProducts} from '../src/experiments/combinationTones.js';
+import {COMBINATION_TONES_CLASSIC, normalizeCombinationToneParams, buildCombinationToneStimulus, predictedCombinationProducts, renderClassicCombinationSamples, magnitudeAt} from '../src/experiments/combinationTones.js';
 import {byId} from '../src/experiments/catalog.js';
 
 test('Classic combination-tone fixture contains exactly two sine primaries',()=>{
@@ -18,6 +18,12 @@ test('predicted products are calculated but not synthesized',()=>{
   const s=buildCombinationToneStimulus(COMBINATION_TONES_CLASSIC);
   const generated=new Set(s.voices.map(v=>v.frequencyHz));
   for(const frequency of Object.values(products))assert.equal(generated.has(frequency),false);
+});
+
+test('offline digital render has energy at primaries but not predicted cochlear products',()=>{
+  const {samples,stimulus,sampleRate}=renderClassicCombinationSamples(COMBINATION_TONES_CLASSIC,48000,1);
+  for(const voice of stimulus.voices)assert.ok(magnitudeAt(samples,sampleRate,voice.frequencyHz)>.1);
+  for(const frequency of Object.values(stimulus.predictedProducts))assert.ok(magnitudeAt(samples,sampleRate,frequency)<1e-10);
 });
 
 test('normalization orders primaries, clamps level and keeps balance bipolar',()=>{
