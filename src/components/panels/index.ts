@@ -13,6 +13,7 @@ import {cambiataPanels} from './cambiata';
 import {shepardPanels} from './shepard';
 import {rissetGlidePanels} from './rissetGlide';
 import {rissetRhythmPanels} from './rissetRhythm';
+import {tritonePanels} from './tritone';
 /** Registry: experiment id → its Lab controls, analysis and response panels. */
 export const experimentPanels:Record<string,ExperimentPanels>={
   'phantom-words':phantomWordsPanels,
@@ -28,5 +29,6 @@ export const experimentPanels:Record<string,ExperimentPanels>={
   cambiata:cambiataPanels,
   shepard:shepardPanels,
   'risset-glide':rissetGlidePanels,
-  'risset-rhythm':rissetRhythmPanels
+  'risset-rhythm':rissetRhythmPanels,
+  tritone:tritonePanels
 };

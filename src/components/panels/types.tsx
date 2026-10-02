@@ -8,6 +8,8 @@ export interface PanelProps{
   report:(response:unknown)=>void;
   setMsg:(message:string)=>void;
   running:boolean;mode:PlaybackMode;session:ExperimentSession|null;
+  /** Start playback with optional parameter overrides (used by trial-based experiments). */
+  play:(override?:Params)=>Promise<void>;
 }
 /** Every experiment declares its own Lab controls, analysis panels and perception-response UI. */
 export interface ExperimentPanels{Controls?:FC<PanelProps>;Analysis?:FC<PanelProps>;Responses?:FC<PanelProps>}

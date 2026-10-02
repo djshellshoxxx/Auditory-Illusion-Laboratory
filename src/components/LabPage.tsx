@@ -22,11 +22,12 @@ export function LabPage(){
   const [params,setParams]=useState<Params>({...exp.classicParams});
   const panels=experimentPanels[id]??{};
   const select=(x:string)=>{stopExperiment();setRunning(false);setSession(null);setId(x);const e:any=experiments.find(q=>q.id===x)!;setParams({...e.classicParams});setMsg('Audio idle')};
-  const start=async()=>{try{const s=await startExperiment(id,params,setMsg);setSession(s??{startedAt:performance.now()});setRunning(true);if(id!=='zwicker')setMsg('Playing')}catch(e){setMsg((e as Error).message)}};
+  const play=async(override?:Params)=>{try{const s=await startExperiment(id,override?{...params,...override}:params,setMsg);setSession(s??{startedAt:performance.now()});setRunning(true);if(id!=='zwicker')setMsg('Playing')}catch(e){setMsg((e as Error).message)}};
+  const start=()=>play();
   const stop=()=>{stopExperiment();setRunning(false);setMsg('Stopped')};
   const report=(response:unknown)=>{PerceptionStore.record({experimentId:id,timestamp:Date.now(),mode,params,response});setMsg('Perception report recorded locally')};
   const exportData=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([PerceptionStore.exportJson()],{type:'application/json'}));a.download='auditory-perception-records.json';a.click()};
-  const props:PanelProps={id,exp,params,setParams,report,setMsg,running,mode,session};
+  const props:PanelProps={id,exp,params,setParams,report,setMsg,running,mode,session,play};
   const Controls=panels.Controls,Analysis=panels.Analysis,Responses=panels.Responses??GenericResponses;
   const hasLanes=Boolean(session?.events?.length||session?.phases?.length);
 
