@@ -22,7 +22,7 @@ export function LabPage(){
   const exp:any=useMemo(()=>experiments.find(e=>e.id===id)!,[id]);
   const [params,setParams]=useState<Params>({...exp.classicParams});
   const panels=experimentPanels[id]??{};
-  useEffect(()=>audioEngine.registerPanicListener(()=>{setRunning(false);setSession(null);setMsg('Panic stop: audio halted')}),[]);
+  useEffect(()=>{const unregister=audioEngine.registerPanicListener(()=>{setRunning(false);setSession(null);setMsg('Panic stop: audio halted')});return()=>{unregister()}},[]);
   const select=(x:string)=>{stopExperiment();setRunning(false);setSession(null);setId(x);const e:any=experiments.find(q=>q.id===x)!;setParams({...e.classicParams});setMsg('Audio idle')};
   const play=async(override?:Params)=>{try{const s=await startExperiment(id,override?{...params,...override}:params,setMsg);setSession(s??{startedAt:performance.now()});setRunning(true);if(id!=='zwicker')setMsg('Playing')}catch(e){setMsg((e as Error).message)}};
   const start=()=>play();
