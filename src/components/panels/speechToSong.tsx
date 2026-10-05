@@ -1,4 +1,4 @@
-import {useRef,useState} from 'react';
+import {useEffect,useRef,useState} from 'react';
 import {Num,type ExperimentPanels,type PanelProps} from './types';
 import {repetitionSchedule} from '../../experiments/speechToSong.js';
 function Controls(p:PanelProps){return <div className="param-grid">
@@ -6,8 +6,9 @@ function Controls(p:PanelProps){return <div className="param-grid">
   <Num label="Interval between repetitions (seconds)" k="intervalSeconds" min={0} max={2} step={.05} {...p}/>
   <small>Classic: ten identical repetitions with a 0.15 s interval. The recorded buffer is never processed.</small></div>}
 function Recorder({params,setParams,setMsg,play,running}:PanelProps){
-  const rec=useRef<MediaRecorder|null>(null),chunks=useRef<Blob[]>([]),[target,setTarget]=useState<'phrase'|'sentence'|null>(null);
-  const record=async(which:'phrase'|'sentence')=>{try{if(rec.current?.state==='recording')rec.current.stop();const s=await navigator.mediaDevices.getUserMedia({audio:true});chunks.current=[];const r=new MediaRecorder(s);rec.current=r;r.ondataavailable=e=>{if(e.data.size)chunks.current.push(e.data)};r.onstop=()=>{const b=new Blob(chunks.current,{type:r.mimeType||'audio/webm'});const url=URL.createObjectURL(b);setParams(c=>({...c,[`${which}Url`]:url}));s.getTracks().forEach(t=>t.stop());setTarget(null);setMsg(`${which==='phrase'?'Phrase':'Sentence'} recorded (kept in browser memory only)`)};r.start();setTarget(which);setMsg(which==='phrase'?'Recording phrase… say a few words, then stop':'Recording full sentence… then stop')}catch{setMsg('Microphone permission unavailable; other experiments still work')}};
+  const rec=useRef<MediaRecorder|null>(null),chunks=useRef<Blob[]>([]),stream=useRef<MediaStream|null>(null),[target,setTarget]=useState<'phrase'|'sentence'|null>(null);
+  useEffect(()=>()=>{const r=rec.current;if(r){r.ondataavailable=null;r.onstop=null;if(r.state==='recording'){try{r.stop()}catch{}}}stream.current?.getTracks().forEach(t=>t.stop());stream.current=null},[]);
+  const record=async(which:'phrase'|'sentence')=>{if(target!==null)return;try{const s=await navigator.mediaDevices.getUserMedia({audio:true});stream.current=s;chunks.current=[];const r=new MediaRecorder(s);rec.current=r;r.ondataavailable=e=>{if(e.data.size)chunks.current.push(e.data)};r.onstop=()=>{const b=new Blob(chunks.current,{type:r.mimeType||'audio/webm'});const url=URL.createObjectURL(b);setParams(c=>({...c,[`${which}Url`]:url}));s.getTracks().forEach(t=>t.stop());stream.current=null;setTarget(null);setMsg(`${which==='phrase'?'Phrase':'Sentence'} recorded (kept in browser memory only)`)};r.start();setTarget(which);setMsg(which==='phrase'?'Recording phrase… say a few words, then stop':'Recording full sentence… then stop')}catch{setMsg('Microphone permission unavailable; other experiments still work')}};
   const stop=()=>{if(rec.current?.state==='recording')rec.current.stop()};
   const sched=repetitionSchedule(1,params);
   return <section className="analysis"><h3>Record (local only)</h3>
