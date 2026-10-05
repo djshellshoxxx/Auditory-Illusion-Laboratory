@@ -21,6 +21,7 @@ import {startPrecedence,precedenceSession} from './precedenceRuntime';
 import {glissandoSession} from './glissandoSession';
 import {zwickerSession} from './zwickerSession';
 let stopCurrent:()=>void=()=>{};
+let unregisterCurrent:()=>void=()=>{};
 type Cleanup=()=>void;
 
 export async function startExperiment(id:string,p:Record<string,any>,onStatus?:(message:string)=>void):Promise<ExperimentSession|void>{stopExperiment();
@@ -43,7 +44,7 @@ export async function startExperiment(id:string,p:Record<string,any>,onStatus?:(
   else if(id==='phantom-words')await startPhantomWords(ctx,bus,p,clean);
   else if(id==='mysterious-melody')run.session=startMysteriousMelody(ctx,bus,p,clean);
   else if(id==='speech-to-song')run.session=await startSpeechToSong(ctx,bus,p,clean);
-  stopCurrent=()=>{for(const f of clean.splice(0)){try{f()}catch{}}};audioEngine.registerCleanup(stopCurrent);
+  stopCurrent=()=>{for(const f of clean.splice(0)){try{f()}catch{}}};unregisterCurrent=audioEngine.registerCleanup(stopCurrent);
   return run.session;
 }
-export function stopExperiment(){stopGlissando();try{stopCurrent()}catch{}stopCurrent=()=>{}}
+export function stopExperiment(){stopGlissando();unregisterCurrent();unregisterCurrent=()=>{};try{stopCurrent()}catch{}stopCurrent=()=>{}}
