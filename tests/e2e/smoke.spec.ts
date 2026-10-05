@@ -206,3 +206,20 @@ test('Infinite Motion: keys play, octave shift works, and Panic stops voices eve
   const values=await page.locator('.lane output').allTextContents();expect(new Set(values).size).toBe(1);
   expect(errors).toEqual([]);
 });
+
+
+test('Laboratory Panic resets transport state and allows immediate restart',async({page})=>{
+  await page.goto('/Auditory-Illusion-Laboratory/');
+  await page.getByRole('button',{name:'Start',exact:true}).click();
+  await expect(page.locator('.status')).toContainText('Playing');
+  await expect(page.getByRole('button',{name:'Start',exact:true})).toBeDisabled();
+
+  await page.getByRole('button',{name:'PANIC STOP'}).click();
+  await expect(page.locator('.status')).toContainText('Panic stop');
+  await expect(page.getByRole('button',{name:'Start',exact:true})).toBeEnabled();
+  await expect(page.getByRole('button',{name:'Stop',exact:true})).toBeDisabled();
+
+  await page.getByRole('button',{name:'Start',exact:true}).click();
+  await expect(page.locator('.status')).toContainText('Playing');
+  await page.getByRole('button',{name:'Stop',exact:true}).click();
+});
