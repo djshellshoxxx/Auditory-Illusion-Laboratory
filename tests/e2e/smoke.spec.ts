@@ -206,3 +206,72 @@ test('Infinite Motion: keys play, octave shift works, and Panic stops voices eve
   const values=await page.locator('.lane output').allTextContents();expect(new Set(values).size).toBe(1);
   expect(errors).toEqual([]);
 });
+
+
+test('Laboratory Panic resets transport state and allows immediate restart',async({page})=>{
+  await page.goto('/Auditory-Illusion-Laboratory/');
+  await page.getByRole('button',{name:'Start',exact:true}).click();
+  await expect(page.locator('.status')).toContainText('Playing');
+  await expect(page.getByRole('button',{name:'Start',exact:true})).toBeDisabled();
+
+  await page.getByRole('button',{name:'PANIC STOP'}).click();
+  await expect(page.locator('.status')).toContainText('Panic stop');
+  await expect(page.getByRole('button',{name:'Start',exact:true})).toBeEnabled();
+  await expect(page.getByRole('button',{name:'Stop',exact:true})).toBeDisabled();
+
+  await page.getByRole('button',{name:'Start',exact:true}).click();
+  await expect(page.locator('.status')).toContainText('Playing');
+  await page.getByRole('button',{name:'Stop',exact:true}).click();
+});
+
+
+test('microphone recorders lock overlapping starts and stop tracks when leaving an experiment',async({page})=>{
+  await page.addInitScript(()=>{
+    (window as any).__micStopped=0;
+    const stream={getTracks:()=>[{stop:()=>{(window as any).__micStopped++}}]};
+    Object.defineProperty(navigator,'mediaDevices',{configurable:true,value:{getUserMedia:async()=>stream}});
+    class FakeMediaRecorder{
+      state='inactive';mimeType='audio/webm';ondataavailable:any=null;onstop:any=null;
+      constructor(_stream:any){}
+      start(){this.state='recording'}
+      stop(){if(this.state!=='recording')return;this.state='inactive';this.onstop?.()}
+    }
+    Object.defineProperty(window,'MediaRecorder',{configurable:true,value:FakeMediaRecorder});
+  });
+  await page.goto('/Auditory-Illusion-Laboratory/');
+  await page.getByRole('button',{name:'Phantom Words'}).click();
+  await page.getByRole('button',{name:'LAB',exact:true}).click();
+  await page.getByRole('button',{name:'Record token A'}).click();
+  await expect(page.getByRole('button',{name:'Record token A'})).toBeDisabled();
+  await expect(page.getByRole('button',{name:'Record token B'})).toBeDisabled();
+  await page.getByRole('button',{name:'Shepard Circular Pitch'}).click();
+  await expect.poll(()=>page.evaluate(()=>(window as any).__micStopped)).toBeGreaterThan(0);
+});
+
+
+test('pending microphone permission cannot leak a stream after leaving the experiment',async({page})=>{
+  await page.addInitScript(()=>{
+    (window as any).__resolveMic=null;
+    (window as any).__micStopped=0;
+    (window as any).__recorderStarts=0;
+    const stream={getTracks:()=>[{stop:()=>{(window as any).__micStopped++}}]};
+    Object.defineProperty(navigator,'mediaDevices',{configurable:true,value:{
+      getUserMedia:()=>new Promise(resolve=>{(window as any).__resolveMic=()=>resolve(stream)})
+    }});
+    class FakeMediaRecorder{
+      state='inactive';mimeType='audio/webm';ondataavailable:any=null;onstop:any=null;
+      constructor(_stream:any){}
+      start(){this.state='recording';(window as any).__recorderStarts++}
+      stop(){this.state='inactive';this.onstop?.()}
+    }
+    Object.defineProperty(window,'MediaRecorder',{configurable:true,value:FakeMediaRecorder});
+  });
+  await page.goto('/Auditory-Illusion-Laboratory/');
+  await page.getByRole('button',{name:'Phantom Words'}).click();
+  await page.getByRole('button',{name:'LAB',exact:true}).click();
+  await page.getByRole('button',{name:'Record token A'}).click();
+  await page.getByRole('button',{name:'Shepard Circular Pitch'}).click();
+  await page.evaluate(()=>(window as any).__resolveMic());
+  await expect.poll(()=>page.evaluate(()=>(window as any).__micStopped)).toBe(1);
+  await expect.poll(()=>page.evaluate(()=>(window as any).__recorderStarts)).toBe(0);
+});
