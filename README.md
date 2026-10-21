@@ -22,6 +22,10 @@ npm run build
 
 Full CI additionally runs Vitest and Playwright. Vite is configured for `/Auditory-Illusion-Laboratory/` GitHub Pages hosting.
 
+## Wiki
+
+Wiki source pages are in [docs/wiki/](docs/wiki/Home.md): user guide, developer guide, architecture rationale and codebase map.
+
 ## Privacy
 
 Perception reports and presets are stored locally in the browser. There is no account or telemetry service. Microphone recordings used by Speech-to-Song remain browser-memory/object-URL data unless the user explicitly exports them.
