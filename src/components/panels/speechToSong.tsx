@@ -1,4 +1,5 @@
-import {useRef,useState} from 'react';
+import {useState} from 'react';
+import {useMicrophone} from './useMicrophone';
 import {Num,type ExperimentPanels,type PanelProps} from './types';
 import {repetitionSchedule} from '../../experiments/speechToSong.js';
 function Controls(p:PanelProps){return <div className="param-grid">
@@ -6,9 +7,15 @@ function Controls(p:PanelProps){return <div className="param-grid">
   <Num label="Interval between repetitions (seconds)" k="intervalSeconds" min={0} max={2} step={.05} {...p}/>
   <small>Classic: ten identical repetitions with a 0.15 s interval. The recorded buffer is never processed.</small></div>}
 function Recorder({params,setParams,setMsg,play,running}:PanelProps){
-  const rec=useRef<MediaRecorder|null>(null),chunks=useRef<Blob[]>([]),[target,setTarget]=useState<'phrase'|'sentence'|null>(null);
-  const record=async(which:'phrase'|'sentence')=>{try{if(rec.current?.state==='recording')rec.current.stop();const s=await navigator.mediaDevices.getUserMedia({audio:true});chunks.current=[];const r=new MediaRecorder(s);rec.current=r;r.ondataavailable=e=>{if(e.data.size)chunks.current.push(e.data)};r.onstop=()=>{const b=new Blob(chunks.current,{type:r.mimeType||'audio/webm'});const url=URL.createObjectURL(b);setParams(c=>({...c,[`${which}Url`]:url}));s.getTracks().forEach(t=>t.stop());setTarget(null);setMsg(`${which==='phrase'?'Phrase':'Sentence'} recorded (kept in browser memory only)`)};r.start();setTarget(which);setMsg(which==='phrase'?'Recording phrase… say a few words, then stop':'Recording full sentence… then stop')}catch{setMsg('Microphone permission unavailable; other experiments still work')}};
-  const stop=()=>{if(rec.current?.state==='recording')rec.current.stop()};
+  const {target, start, stop} = useMicrophone<'phrase' | 'sentence'>();
+  const record = (which: 'phrase' | 'sentence') => start(which,
+    () => setMsg(which === 'phrase' ? 'Recording phrase… say a few words, then stop' : 'Recording full sentence… then stop'),
+    blob => {
+      const url = URL.createObjectURL(blob);
+      setParams(c => ({...c, [`${which}Url`]: url}));
+      setMsg(`${which === 'phrase' ? 'Phrase' : 'Sentence'} recorded (kept in browser memory only)`);
+    },
+    () => setMsg('Microphone permission unavailable; other experiments still work'));
   const sched=repetitionSchedule(1,params);
   return <section className="analysis"><h3>Record (local only)</h3>
     <p><button onClick={()=>void record('phrase')} disabled={target!==null}>Record short phrase</button> <button onClick={()=>void record('sentence')} disabled={target!==null}>Record full sentence (optional)</button> <button onClick={stop} disabled={target===null}>Stop recording</button></p>

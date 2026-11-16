@@ -1,6 +1,7 @@
-import {useMemo,useState} from 'react';
+import {useEffect,useMemo,useState} from 'react';
 import {experiments} from '../experiments/catalog.js';
 import {startExperiment,stopExperiment} from '../experiments/runtime';
+import {audioEngine} from '../audio/AudioEngine';
 import {PerceptionStore} from '../perception/store';
 import type {PlaybackMode} from '../types';
 import type {ExperimentSession} from '../experiments/session';
@@ -21,6 +22,7 @@ export function LabPage(){
   const exp:any=useMemo(()=>experiments.find(e=>e.id===id)!,[id]);
   const [params,setParams]=useState<Params>({...exp.classicParams});
   const panels=experimentPanels[id]??{};
+  useEffect(()=>{const unregister=audioEngine.registerPanicListener(()=>{setRunning(false);setSession(null);setMsg('Panic stop: audio halted')});return()=>{unregister()}},[]);
   const select=(x:string)=>{stopExperiment();setRunning(false);setSession(null);setId(x);const e:any=experiments.find(q=>q.id===x)!;setParams({...e.classicParams});setMsg('Audio idle')};
   const play=async(override?:Params)=>{try{const s=await startExperiment(id,override?{...params,...override}:params,setMsg);setSession(s??{startedAt:performance.now()});setRunning(true);if(id!=='zwicker')setMsg('Playing')}catch(e){setMsg((e as Error).message)}};
   const start=()=>play();
